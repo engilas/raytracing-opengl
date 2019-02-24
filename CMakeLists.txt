@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 
-project(RayTracing_OpenCLGL)
+project(RayTracing_OpenGL)
 
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -52,20 +52,12 @@ endif(APPLE)
 
 find_package(OpenGL REQUIRED)
 find_package(GLFW REQUIRED)
-find_package(OpenCL REQUIRED)
 
 add_subdirectory(external_sources/glad)
-
-if(OpenCL_FOUND)
-    if(${OpenCL_VERSION_MAJOR} EQUAL 1 AND ${OpenCL_VERSION_MINOR} LESS 2)
-        message(FATAL_ERROR "At least OpenCL 1.2 version required")
-    ENDIF()
-endif()
 
 include_directories(
     ${OPENGL_INCLUDE_DIR}
     ${GLFW_INCLUDE_DIR}
-    ${OpenCL_INCLUDE_DIRS}
     "${CMAKE_SOURCE_DIR}/common"
     )
 
@@ -81,7 +73,6 @@ add_executable("rt"
 target_link_libraries("rt"
     PRIVATE ${OPENGL_LIBRARIES}
     PRIVATE ${GLFW_LIBRARY}
-    PRIVATE ${OpenCL_LIBRARIES}
     PRIVATE ${X11_LIBS}
     PRIVATE ${CMAKE_DL_LIBS}
     PRIVATE glad-interface

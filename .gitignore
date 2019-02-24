@@ -40,6 +40,5 @@ packages/
 #cmake generated
 CMakeFiles/
 *.vcxproj*
-*.cmake
 *.sln
 CMakeCache.txt
