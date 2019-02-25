@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 
 class GLWrapper
 {
