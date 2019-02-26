@@ -71,6 +71,10 @@ bool GLWrapper::init()
 	}
 	printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
 
+    texHandle = genTexture();
+	renderHandle = genRenderProg();
+	computeHandle = genComputeProg();
+
 	return true;
 }
 
@@ -78,6 +82,20 @@ void GLWrapper::stop()
 {
 	glfwDestroyWindow(window);
 	glfwTerminate();
+}
+
+void GLWrapper::draw()
+{
+    glUseProgram(computeHandle);
+	//glUniform1f(glGetUniformLocation(computeHandle, "roll"), (float)frame*0.01f);
+	glDispatchCompute(width / 16.0, height / 16.0, 1);
+	//glDispatchCompute(w, h, 1); // 512^2 threads in blocks of 16^2
+	checkErrors("Dispatch compute shader");
+
+    glUseProgram(renderHandle);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	//swapBuffers();
+	checkErrors("Draw screen");
 }
 
 
@@ -119,62 +137,111 @@ bool GLWrapper::check_program_errors(GLuint program) {
 	return true;
 }
 
-GLuint GLWrapper::create_quad_vao() {
-	GLuint vao = 0, vbo = 0;
-	float verts[] = { -1.0f, -1.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, 1.0f,
-										1.0f,	-1.0f, 1.0f, 0.0f, 1.0f,	1.0f, 1.0f, 1.0f };
-	glGenBuffers(1, &vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo);
-	glBufferData(GL_ARRAY_BUFFER, 16 * sizeof(float), verts, GL_STATIC_DRAW);
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-	glEnableVertexAttribArray(0);
-	GLintptr stride = 4 * sizeof(float);
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, NULL);
-	glEnableVertexAttribArray(1);
-	GLintptr offset = 2 * sizeof(float);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid *)offset);
-	return vao;
+void GLWrapper::checkErrors(std::string desc)
+{
+    GLenum e = glGetError();
+	if (e != GL_NO_ERROR) {
+		fprintf(stderr, "OpenGL error in \"%s\": (%d)\n", desc.c_str(), e); //todo error must be here
+		exit(20);
+	}
 }
 
-// this is the quad's vertex shader in an ugly C string
-static const char *vert_shader_str =
-"#version 430\n                                                               \
-layout (location = 0) in vec2 vp;\n                                           \
-layout (location = 1) in vec2 vt;\n                                           \
-out vec2 st;\n                                                                \
-\n                                                                            \
-void main () {\n                                                              \
-  st = vt;\n                                                                  \
-  gl_Position = vec4 (vp, 0.0, 1.0);\n                                        \
-}\n";
+GLuint GLWrapper::genTexture()
+{
+    GLuint texHandle;
+	glGenTextures(1, &texHandle);
 
-// this is the quad's fragment shader in an ugly C string
-static const char *frag_shader_str =
-"#version 430\n                                                               \
-in vec2 st;\n                                                                 \
-uniform sampler2D img;\n                                                      \
-out vec4 fc;\n                                                                \
-\n                                                                            \
-void main () {\n                                                              \
-  fc = texture (img, st);\n                                                 \
-}\n";
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, texHandle);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 512, 512, 0, GL_RGBA, GL_FLOAT, NULL);
 
-GLuint GLWrapper::create_quad_program() {
-	GLuint program = glCreateProgram();
-	GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(vert_shader, 1, &vert_shader_str, NULL);
-	glCompileShader(vert_shader);
-	check_shader_errors(vert_shader); // code moved to gl_utils.cpp
-	glAttachShader(program, vert_shader);
-	GLuint frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(frag_shader, 1, &frag_shader_str, NULL);
-	glCompileShader(frag_shader);
-	check_shader_errors(frag_shader); // code moved to gl_utils.cpp
-	glAttachShader(program, frag_shader);
-	glLinkProgram(program);
-	check_program_errors(program); // code moved to gl_utils.cpp
-	return program;
+	// Because we're also using this tex as an image (in order to write to it),
+	// we bind it to an image unit as well
+	glBindImageTexture(0, texHandle, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+	checkErrors("Gen texture");
+	return texHandle;
+}
+
+GLuint GLWrapper::genRenderProg()
+{
+    GLuint progHandle = glCreateProgram();
+	GLuint vp = glCreateShader(GL_VERTEX_SHADER);
+	GLuint fp = glCreateShader(GL_FRAGMENT_SHADER);
+
+	const char *vpSrc[] = {
+		"#version 430\n",
+		"in vec2 pos;\
+		 out vec2 texCoord;\
+		 void main() {\
+			 texCoord = pos*0.5f + 0.5f;\
+			 gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);\
+		 }"
+	};
+
+	const char *fpSrc[] = {
+		"#version 430\n",
+		"uniform sampler2D srcTex;\
+		 in vec2 texCoord;\
+		 out vec4 color;\
+		 void main() {\
+			 color = texture2D(srcTex,texCoord);\
+		 }"
+	};
+
+	glShaderSource(vp, 2, vpSrc, NULL);
+	glShaderSource(fp, 2, fpSrc, NULL);
+
+	glCompileShader(vp);
+	int rvalue;
+	glGetShaderiv(vp, GL_COMPILE_STATUS, &rvalue);
+	if (!rvalue) {
+		fprintf(stderr, "Error in compiling vp\n");
+		exit(30);
+	}
+	glAttachShader(progHandle, vp);
+
+	glCompileShader(fp);
+	glGetShaderiv(fp, GL_COMPILE_STATUS, &rvalue);
+	if (!rvalue) {
+		fprintf(stderr, "Error in compiling fp\n");
+		exit(31);
+	}
+	glAttachShader(progHandle, fp);
+
+	glBindFragDataLocation(progHandle, 0, "color");
+	glLinkProgram(progHandle);
+
+	glGetProgramiv(progHandle, GL_LINK_STATUS, &rvalue);
+	if (!rvalue) {
+		fprintf(stderr, "Error in linking sp\n");
+		exit(32);
+	}
+
+	glUseProgram(progHandle);
+	glUniform1i(glGetUniformLocation(progHandle, "srcTex"), 0);
+
+	GLuint vertArray;
+	glGenVertexArrays(1, &vertArray);
+	glBindVertexArray(vertArray);
+
+	GLuint posBuf;
+	glGenBuffers(1, &posBuf);
+	glBindBuffer(GL_ARRAY_BUFFER, posBuf);
+	float data[] = {
+		-1.0f, -1.0f,
+		-1.0f, 1.0f,
+		1.0f, -1.0f,
+		1.0f, 1.0f
+	};
+	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, data, GL_STREAM_DRAW);
+	GLint posPtr = glGetAttribLocation(progHandle, "pos");
+	glVertexAttribPointer(posPtr, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(posPtr);
+
+	checkErrors("Render shaders");
+	return progHandle;
 }
 
 static const char *compute_shader_str =
@@ -199,7 +266,6 @@ float sphere_r = 1.0;                                                         \
 \n                                                                            \
 vec3 omc = ray_o - sphere_c;\n                                                \
 float b = dot (ray_d, omc);\n                                                 \
-for (int ia = 0; ia < 500; ia++)    b = dot (ray_d, omc);\n                                         \
 float c = dot (omc, omc) - sphere_r * sphere_r;\n                             \
 float bsqmc = b * b - c;\n                                                    \
 float t = 10000.0;\n                                                          \
@@ -211,17 +277,58 @@ if (bsqmc >= 0.0) {\n                                                         \
   imageStore (img_output, pixel_coords, pixel);\n                             \
 }\n";
 
-GLuint GLWrapper::create_compute_program() 
+GLuint GLWrapper::genComputeProg()
 {
-	GLuint ray_program = 0;
-	 // create the compute shader
-	GLuint ray_shader = glCreateShader(GL_COMPUTE_SHADER);
-	glShaderSource(ray_shader, 1, &compute_shader_str, NULL);
-	glCompileShader(ray_shader);
-	(check_shader_errors(ray_shader)); // code moved to gl_utils.cpp
-	ray_program = glCreateProgram();
-	glAttachShader(ray_program, ray_shader);
-	glLinkProgram(ray_program);
-	(check_program_errors(ray_program)); // code moved to gl_utils.cpp
-	return ray_program;
+    // Creating the compute shader, and the program object containing the shader
+	GLuint progHandle = glCreateProgram();
+	GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
+
+	// In order to write to a texture, we have to introduce it as image2D.
+	// local_size_x/y/z layout variables define the work group size.
+	// gl_GlobalInvocationID is a uvec3 variable giving the global ID of the thread,
+	// gl_LocalInvocationID is the local index within the work group, and
+	// gl_WorkGroupID is the work group's index
+	const char *csSrc = 
+		"#version 430\n \
+		uniform float roll;\
+		 layout (rgba32f, binding = 0) uniform image2D destTex;\
+         layout (local_size_x = 16, local_size_y = 16) in;\
+         void main() {\
+             ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);\
+             float localCoef = length(vec2(ivec2(gl_LocalInvocationID.xy)-8)/8.0);\
+             float globalCoef = sin(float(gl_WorkGroupID.x+gl_WorkGroupID.y)*0.1 + roll)*0.5;\
+             imageStore(destTex, storePos, vec4(1.0-globalCoef*localCoef, 0.0, 0.0, 0.0));\
+         }"
+	;
+
+	glShaderSource(cs, 1, &compute_shader_str, NULL);
+	glCompileShader(cs);
+	int rvalue;
+	glGetShaderiv(cs, GL_COMPILE_STATUS, &rvalue);
+	if (!rvalue) {
+		fprintf(stderr, "Error in compiling the compute shader\n");
+		GLchar log[10240];
+		GLsizei length;
+		glGetShaderInfoLog(cs, 10239, &length, log);
+		fprintf(stderr, "Compiler log:\n%s\n", log);
+		exit(40);
+	}
+	glAttachShader(progHandle, cs);
+
+	glLinkProgram(progHandle);
+	glGetProgramiv(progHandle, GL_LINK_STATUS, &rvalue);
+	if (!rvalue) {
+		fprintf(stderr, "Error in linking compute shader program\n");
+		GLchar log[10240];
+		GLsizei length;
+		glGetProgramInfoLog(progHandle, 10239, &length, log);
+		fprintf(stderr, "Linker log:\n%s\n", log);
+		exit(41);
+	}
+	glUseProgram(progHandle);
+
+	glUniform1i(glGetUniformLocation(progHandle, "img_output"), 0);
+
+	checkErrors("Compute shader");
+	return progHandle;
 }

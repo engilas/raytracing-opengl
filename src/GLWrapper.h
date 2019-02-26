@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <GLFW/glfw3.h>
+#include <string>
 
 class GLWrapper
 {
@@ -20,21 +21,28 @@ public:
 
 	GLFWwindow* window;
 
-	GLuint create_quad_vao();
-	GLuint create_quad_program();
-
-	GLuint create_compute_program();
+    void draw();
+	
 
 private:
+    GLuint renderHandle;
+    GLuint computeHandle;
+    GLuint texHandle;
+
 	int width;
 	int height;
 
 	bool fullScreen = true;
 	bool useCustomResolution = false;
 
-	void print_shader_info_log(GLuint shader);
-	void print_program_info_log(GLuint program);
-	bool check_shader_errors(GLuint shader);
-	bool check_program_errors(GLuint program);
+    static void print_shader_info_log(GLuint shader);
+    static void print_program_info_log(GLuint program);
+    static bool check_shader_errors(GLuint shader);
+    static bool check_program_errors(GLuint program);
+
+    static void checkErrors(std::string desc);
+    static GLuint genTexture();
+    static GLuint genRenderProg();
+    GLuint genComputeProg();
 };
 
