@@ -58,12 +58,6 @@ static const float texcords[8] =
     0.0, 0.0
 };
 
-GLuint genTexture();
-GLuint genRenderProg(GLuint texHandle);
-GLuint genComputeProg(GLuint texHandle);
-
-static const uint indices[6] = {0,1,2,0,2,3};
-
 static int wind_width = 720;
 static int wind_height= 720;
 
