@@ -1,4 +1,6 @@
 #include "GLWrapper.h"
+#include <iostream>
+#include <fstream>
 
 static void glfw_error_callback(int error, const char * desc)
 {
@@ -34,6 +36,11 @@ int GLWrapper::getHeight()
 {
 	return height;
 }
+
+typedef struct color
+{
+	float r, g, b, a; // colors
+};
 
 bool GLWrapper::init()
 {
@@ -71,9 +78,22 @@ bool GLWrapper::init()
 	}
 	printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
 
-    texHandle = genTexture();
+    texHandle = genTexture(width, height);
 	renderHandle = genRenderProg();
 	computeHandle = genComputeProg();
+
+
+	color c = { 0 };
+	c.r = 255;
+	c.g = 0;
+	c.b = 0;
+	c.a = 0;
+
+	GLuint ssbo = 0;
+	glGenBuffers(1, &ssbo);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(c), &c, GL_DYNAMIC_COPY);
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return true;
 }
@@ -86,6 +106,10 @@ void GLWrapper::stop()
 
 void GLWrapper::draw()
 {
+	
+
+
+
     glUseProgram(computeHandle);
 	//glUniform1f(glGetUniformLocation(computeHandle, "roll"), (float)frame*0.01f);
 	glDispatchCompute(width / 16.0, height / 16.0, 1);
@@ -146,7 +170,7 @@ void GLWrapper::checkErrors(std::string desc)
 	}
 }
 
-GLuint GLWrapper::genTexture()
+GLuint GLWrapper::genTexture(int width, int height)
 {
     GLuint texHandle;
 	glGenTextures(1, &texHandle);
@@ -155,7 +179,7 @@ GLuint GLWrapper::genTexture()
 	glBindTexture(GL_TEXTURE_2D, texHandle);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, 512, 512, 0, GL_RGBA, GL_FLOAT, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
 
 	// Because we're also using this tex as an image (in order to write to it),
 	// we bind it to an image unit as well
@@ -244,7 +268,59 @@ GLuint GLWrapper::genRenderProg()
 	return progHandle;
 }
 
+char* loadFile(const char *fname, GLint &fSize)
+{
+	std::ifstream file(fname, std::ios::in | std::ios::binary | std::ios::ate);
+	if (file.is_open())
+	{
+		unsigned int size = (unsigned int)file.tellg();
+		fSize = size;
+		char *memblock = new char[size];
+		file.seekg(0, std::ios::beg);
+		file.read(memblock, size);
+		file.close();
+		std::cout << "file " << fname << " loaded" << std::endl;
+		return memblock;
+	}
+
+	std::cout << "Unable to open file " << fname << std::endl;
+	return NULL;
+}
+
 static const char *compute_shader_str =
+"#version 430\n                                                               \
+layout (local_size_x = 16, local_size_y = 16) in;\n                             \
+layout (rgba32f, binding = 0) uniform image2D img_output;\n                   \
+\n                                                                            \
+void main () {\n                                                              \
+  vec4 pixel = vec4 (0.0, 0.0, 0.0, 1.0);\n                                   \
+  ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);\n                    \
+\n                                                                            \
+float max_x = 5.0;\n                                                          \
+float max_y = 5.0;\n                                                          \
+ivec2 dims = imageSize (img_output);\n                                        \
+float x = (float(pixel_coords.x * 2 - dims.x) / dims.x);\n                    \
+float y = (float(pixel_coords.y * 2 - dims.y) / dims.y);\n                    \
+vec3 ray_o = vec3 (x * max_x, y * max_y, 0.0);\n                              \
+vec3 ray_d = vec3 (0.0, 0.0, -1.0); // ortho\n                                \
+\n                                                                            \
+vec3 sphere_c = vec3 (0.0, 0.0, -10.0);                                       \
+float sphere_r = 1.0;                                                         \
+\n                                                                            \
+vec3 omc = ray_o - sphere_c;\n                                                \
+float b = dot (ray_d, omc);\n                                                 \
+float c = dot (omc, omc) - sphere_r * sphere_r;\n                             \
+float bsqmc = b * b - c;\n                                                    \
+float t = 10000.0;\n                                                          \
+// hit one or both sides\n                                                    \
+if (bsqmc >= 0.0) {\n                                                         \
+  pixel = vec4 (0.4, 0.4, 1.0, 1.0);\n                                        \
+}\n                                                                           \
+\n                                                                            \
+  imageStore (img_output, pixel_coords, pixel);\n                             \
+}\n";
+
+static const char *test =
 "#version 430\n                                                               \
 layout (local_size_x = 16, local_size_y = 16) in;\n                             \
 layout (rgba32f, binding = 0) uniform image2D img_output;\n                   \
@@ -283,25 +359,29 @@ GLuint GLWrapper::genComputeProg()
 	GLuint progHandle = glCreateProgram();
 	GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
 
-	// In order to write to a texture, we have to introduce it as image2D.
-	// local_size_x/y/z layout variables define the work group size.
-	// gl_GlobalInvocationID is a uvec3 variable giving the global ID of the thread,
-	// gl_LocalInvocationID is the local index within the work group, and
-	// gl_WorkGroupID is the work group's index
-	const char *csSrc = 
-		"#version 430\n \
-		uniform float roll;\
-		 layout (rgba32f, binding = 0) uniform image2D destTex;\
-         layout (local_size_x = 16, local_size_y = 16) in;\
-         void main() {\
-             ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);\
-             float localCoef = length(vec2(ivec2(gl_LocalInvocationID.xy)-8)/8.0);\
-             float globalCoef = sin(float(gl_WorkGroupID.x+gl_WorkGroupID.y)*0.1 + roll)*0.5;\
-             imageStore(destTex, storePos, vec4(1.0-globalCoef*localCoef, 0.0, 0.0, 0.0));\
-         }"
-	;
+	//// In order to write to a texture, we have to introduce it as image2D.
+	//// local_size_x/y/z layout variables define the work group size.
+	//// gl_GlobalInvocationID is a uvec3 variable giving the global ID of the thread,
+	//// gl_LocalInvocationID is the local index within the work group, and
+	//// gl_WorkGroupID is the work group's index
+	//const char *csSrc = 
+	//	"#version 430\n \
+	//	uniform float roll;\
+	//	 layout (rgba32f, binding = 0) uniform image2D destTex;\
+ //        layout (local_size_x = 16, local_size_y = 16) in;\
+ //        void main() {\
+ //            ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);\
+ //            float localCoef = length(vec2(ivec2(gl_LocalInvocationID.xy)-8)/8.0);\
+ //            float globalCoef = sin(float(gl_WorkGroupID.x+gl_WorkGroupID.y)*0.1 + roll)*0.5;\
+ //            imageStore(destTex, storePos, vec4(1.0-globalCoef*localCoef, 0.0, 0.0, 0.0));\
+ //        }"
+	//;
 
-	glShaderSource(cs, 1, &compute_shader_str, NULL);
+	char *source;
+	GLint source_len;
+	source = loadFile(ASSETS_DIR "/rt.comp", source_len);
+
+	glShaderSource(cs, 1, &source, &source_len);
 	glCompileShader(cs);
 	int rvalue;
 	glGetShaderiv(cs, GL_COMPILE_STATUS, &rvalue);
@@ -330,5 +410,8 @@ GLuint GLWrapper::genComputeProg()
 	glUniform1i(glGetUniformLocation(progHandle, "img_output"), 0);
 
 	checkErrors("Compute shader");
+
+	delete[] source;
+
 	return progHandle;
 }

@@ -41,7 +41,7 @@ private:
     static bool check_program_errors(GLuint program);
 
     static void checkErrors(std::string desc);
-    static GLuint genTexture();
+	static GLuint genTexture(int width, int height);
     static GLuint genRenderProg();
     GLuint genComputeProg();
 };

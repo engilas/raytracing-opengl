@@ -1,0 +1,12 @@
+#version 430
+layout (local_size_x = 16, local_size_y = 16) in;
+layout (rgba32f, binding = 0) uniform image2D img_output;
+
+layout( std140, binding=0 ) buffer Col
+{
+    vec4 Colors[ ]; // array of structures
+};
+
+void main () {
+
+}                                                             
