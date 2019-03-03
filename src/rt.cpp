@@ -32,10 +32,7 @@
 static int wind_width = 720;
 static int wind_height= 720;
 
-typedef struct color
-{
-	float r, g, b, a; // colors
-};
+
 
 int main()
 {
