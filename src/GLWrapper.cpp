@@ -37,10 +37,17 @@ int GLWrapper::getHeight()
 	return height;
 }
 
-typedef struct color
+typedef struct c
 {
 	float r, g, b, a; // colors
-};
+} c;
+
+typedef struct color
+{
+    float x[4]; // colors
+    float r2;
+	
+} color;
 
 bool GLWrapper::init()
 {
@@ -83,17 +90,34 @@ bool GLWrapper::init()
 	computeHandle = genComputeProg();
 
 
-	color c = { 0 };
-	c.r = 255;
-	c.g = 0;
-	c.b = 0;
-	c.a = 0;
+	color c = {};
+	c.x[0] = 0.3;
+	c.x[1] = 0.5;
+	c.x[2] = 0.7;
+	c.x[3] = 1;
+    c.r2 = 0.1;
+
+    color arr[] = {c, c};
 
 	GLuint ssbo = 0;
 	glGenBuffers(1, &ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(c), &c, GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(arr) , arr, GL_STATIC_DRAW);
+    //GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+    //auto colors = (color*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(arr), bufMask);
+    //for (int i = 0; i < 2; ++i)
+    //{
+    //    colors[i].x[0] = 0.3;
+	   // colors[i].x[1] = 0.5;
+	   // colors[i].x[2] = 0.7;
+	   // colors[i].x[3] = 1;
+    //    colors[i].r2 = 0.1;
+    //}
+    ////auto c2 = colors + 1;
+    ////memcpy(colors, arr, sizeof(arr));
+    //glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return true;
@@ -107,11 +131,7 @@ void GLWrapper::stop()
 
 void GLWrapper::draw()
 {
-	
-
-
-
-    glUseProgram(computeHandle);
+	glUseProgram(computeHandle);
 	//glUniform1f(glGetUniformLocation(computeHandle, "roll"), (float)frame*0.01f);
 	glDispatchCompute(width / 16.0, height / 16.0, 1);
 	//glDispatchCompute(w, h, 1); // 512^2 threads in blocks of 16^2
@@ -269,7 +289,7 @@ GLuint GLWrapper::genRenderProg()
 	return progHandle;
 }
 
-char* loadFile(const char *fname, GLint &fSize)
+static char* load_file(const char *fname, GLint &fSize)
 {
 	std::ifstream file(fname, std::ios::in | std::ios::binary | std::ios::ate);
 	if (file.is_open())
@@ -288,99 +308,15 @@ char* loadFile(const char *fname, GLint &fSize)
 	return NULL;
 }
 
-static const char *compute_shader_str =
-"#version 430\n                                                               \
-layout (local_size_x = 16, local_size_y = 16) in;\n                             \
-layout (rgba32f, binding = 0) uniform image2D img_output;\n                   \
-\n                                                                            \
-void main () {\n                                                              \
-  vec4 pixel = vec4 (0.0, 0.0, 0.0, 1.0);\n                                   \
-  ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);\n                    \
-\n                                                                            \
-float max_x = 5.0;\n                                                          \
-float max_y = 5.0;\n                                                          \
-ivec2 dims = imageSize (img_output);\n                                        \
-float x = (float(pixel_coords.x * 2 - dims.x) / dims.x);\n                    \
-float y = (float(pixel_coords.y * 2 - dims.y) / dims.y);\n                    \
-vec3 ray_o = vec3 (x * max_x, y * max_y, 0.0);\n                              \
-vec3 ray_d = vec3 (0.0, 0.0, -1.0); // ortho\n                                \
-\n                                                                            \
-vec3 sphere_c = vec3 (0.0, 0.0, -10.0);                                       \
-float sphere_r = 1.0;                                                         \
-\n                                                                            \
-vec3 omc = ray_o - sphere_c;\n                                                \
-float b = dot (ray_d, omc);\n                                                 \
-float c = dot (omc, omc) - sphere_r * sphere_r;\n                             \
-float bsqmc = b * b - c;\n                                                    \
-float t = 10000.0;\n                                                          \
-// hit one or both sides\n                                                    \
-if (bsqmc >= 0.0) {\n                                                         \
-  pixel = vec4 (0.4, 0.4, 1.0, 1.0);\n                                        \
-}\n                                                                           \
-\n                                                                            \
-  imageStore (img_output, pixel_coords, pixel);\n                             \
-}\n";
-
-static const char *test =
-"#version 430\n                                                               \
-layout (local_size_x = 16, local_size_y = 16) in;\n                             \
-layout (rgba32f, binding = 0) uniform image2D img_output;\n                   \
-\n                                                                            \
-void main () {\n                                                              \
-  vec4 pixel = vec4 (0.0, 0.0, 0.0, 1.0);\n                                   \
-  ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);\n                    \
-\n                                                                            \
-float max_x = 5.0;\n                                                          \
-float max_y = 5.0;\n                                                          \
-ivec2 dims = imageSize (img_output);\n                                        \
-float x = (float(pixel_coords.x * 2 - dims.x) / dims.x);\n                    \
-float y = (float(pixel_coords.y * 2 - dims.y) / dims.y);\n                    \
-vec3 ray_o = vec3 (x * max_x, y * max_y, 0.0);\n                              \
-vec3 ray_d = vec3 (0.0, 0.0, -1.0); // ortho\n                                \
-\n                                                                            \
-vec3 sphere_c = vec3 (0.0, 0.0, -10.0);                                       \
-float sphere_r = 1.0;                                                         \
-\n                                                                            \
-vec3 omc = ray_o - sphere_c;\n                                                \
-float b = dot (ray_d, omc);\n                                                 \
-float c = dot (omc, omc) - sphere_r * sphere_r;\n                             \
-float bsqmc = b * b - c;\n                                                    \
-float t = 10000.0;\n                                                          \
-// hit one or both sides\n                                                    \
-if (bsqmc >= 0.0) {\n                                                         \
-  pixel = vec4 (0.4, 0.4, 1.0, 1.0);\n                                        \
-}\n                                                                           \
-\n                                                                            \
-  imageStore (img_output, pixel_coords, pixel);\n                             \
-}\n";
-
 GLuint GLWrapper::genComputeProg()
 {
     // Creating the compute shader, and the program object containing the shader
 	GLuint progHandle = glCreateProgram();
 	GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
 
-	//// In order to write to a texture, we have to introduce it as image2D.
-	//// local_size_x/y/z layout variables define the work group size.
-	//// gl_GlobalInvocationID is a uvec3 variable giving the global ID of the thread,
-	//// gl_LocalInvocationID is the local index within the work group, and
-	//// gl_WorkGroupID is the work group's index
-	//const char *csSrc = 
-	//	"#version 430\n \
-	//	uniform float roll;\
-	//	 layout (rgba32f, binding = 0) uniform image2D destTex;\
- //        layout (local_size_x = 16, local_size_y = 16) in;\
- //        void main() {\
- //            ivec2 storePos = ivec2(gl_GlobalInvocationID.xy);\
- //            float localCoef = length(vec2(ivec2(gl_LocalInvocationID.xy)-8)/8.0);\
- //            float globalCoef = sin(float(gl_WorkGroupID.x+gl_WorkGroupID.y)*0.1 + roll)*0.5;\
- //            imageStore(destTex, storePos, vec4(1.0-globalCoef*localCoef, 0.0, 0.0, 0.0));\
- //        }"
-	//;
-
 	char *source;
 	GLint source_len;
-	source = loadFile(ASSETS_DIR "/rt.comp", source_len);
+	source = load_file(ASSETS_DIR "/rt.comp", source_len);
 
 	glShaderSource(cs, 1, &source, &source_len);
 	glCompileShader(cs);
