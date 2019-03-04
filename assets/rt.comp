@@ -2,11 +2,13 @@
 layout (local_size_x = 16, local_size_y = 16) in;
 layout (rgba32f, binding = 0) uniform image2D img_output;
 
-layout( std140, binding=0 ) buffer Col
+layout( std430, binding=0 ) buffer col
 {
     vec4 Colors[ ]; // array of structures
 };
 
 void main () {
-
+    vec4 color = Colors[0];
+    ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+    imageStore (img_output, pixel_coords, color);
 }                                                             

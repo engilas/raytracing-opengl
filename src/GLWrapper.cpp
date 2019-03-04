@@ -93,6 +93,7 @@ bool GLWrapper::init()
 	glGenBuffers(1, &ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(c), &c, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return true;
