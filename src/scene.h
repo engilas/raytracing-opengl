@@ -26,7 +26,7 @@ typedef struct {
 
 typedef struct {
 	float4 camera_pos;
-    quaternion camera_rotation;
+    float4 quat_camera_rotation;
 	float4 bg_color;
 
 	int canvas_width;

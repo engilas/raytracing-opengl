@@ -269,10 +269,8 @@ public:
 		v[2] = qm.z;
 	}
 
-	quaternion GetStruct() {
-		quaternion q;
-		q.w = this->w;
-		q.v = { x,y,z };
+	float4 GetStruct() {
+		float4 q = {x, y, z, w};
 		return q;
 	}
 

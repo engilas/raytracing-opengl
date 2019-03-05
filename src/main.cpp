@@ -101,7 +101,7 @@ rt_scene create_scene(int width, int height, int spheresCount, int lightCount)
     scene.viewport_dist = 1;
     scene.viewport_height = height / static_cast<float>(min);
     scene.viewport_width = width / static_cast<float>(min);
-	scene.bg_color = {};
+	scene.bg_color = {0,0,0.2};
 	scene.reflect_depth = 3;
 
     scene.sphere_count = spheresCount;
@@ -171,6 +171,7 @@ int main()
 	glWrapper.init();
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();
+    initBuffers();
 
 	glfwSwapInterval(0);
 
