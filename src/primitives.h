@@ -1,6 +1,14 @@
 #pragma once
 
+struct float4 {
+	float x, y, z, w;
+};
+
 typedef struct {
-	//float w;
-	//float4 v;
+	float4 v;
+
+    float w;
+
+    float __padding[3];
 } quaternion;
+

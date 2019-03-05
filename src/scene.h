@@ -3,37 +3,39 @@
 #include "primitives.h"
 
 typedef struct {
-	/*cl_float4 center;
-	cl_float4 color;
-	cl_float radius;
-	cl_float reflect;
-	cl_int specular;*/
+	float4 center;
+	float4 color;
+	float radius;
+	float reflect;
+	int specular;
+
+    float __padding[1];
 } rt_sphere;
 
-typedef enum { Ambient, Point, Direct } lightType;
+typedef enum { ambient, point, direct } lightType;
 
 typedef struct {
-	lightType type;
-	/*cl_float intensity;
-	cl_float4 position;
-	cl_float4 direction;*/
+	float4 position;
+	float4 direction;
+
+    lightType type;
+	float intensity;
+
+    float __padding[2];
 } rt_light;
 
 typedef struct {
-	/*cl_float4 camera_pos;
-	cl_float4 bg_color;
-	cl_float canvas_width;
-	cl_float canvas_height;
-	cl_float viewport_width;
-	cl_float viewport_height;
-	cl_float viewport_dist;
-	cl_int reflect_depth;
+	float4 camera_pos;
+    quaternion camera_rotation;
+	float4 bg_color;
 
-	cl_int sphere_count;
-	cl_int light_count;*/
+	int canvas_width;
+	int canvas_height;
+	float viewport_width;
+	float viewport_height;
 
-	quaternion camera_rotation;
-
-	rt_sphere spheres[64];
-	rt_light lights[16];
+	float viewport_dist;
+	int reflect_depth;
+	int sphere_count;
+	int light_count;
 } rt_scene;

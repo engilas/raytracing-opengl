@@ -37,18 +37,6 @@ int GLWrapper::getHeight()
 	return height;
 }
 
-typedef struct c
-{
-	float r, g, b, a; // colors
-} c;
-
-typedef struct color
-{
-    float x[4]; // colors
-    float r2;
-	
-} color;
-
 bool GLWrapper::init()
 {
 	if (!glfwInit())
@@ -88,37 +76,6 @@ bool GLWrapper::init()
     texHandle = genTexture(width, height);
 	renderHandle = genRenderProg();
 	computeHandle = genComputeProg();
-
-
-	color c = {};
-	c.x[0] = 0.3;
-	c.x[1] = 0.5;
-	c.x[2] = 0.7;
-	c.x[3] = 1;
-    c.r2 = 0.1;
-
-    color arr[] = {c, c};
-
-	GLuint ssbo = 0;
-	glGenBuffers(1, &ssbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(arr) , arr, GL_STATIC_DRAW);
-    //GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-    //auto colors = (color*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(arr), bufMask);
-    //for (int i = 0; i < 2; ++i)
-    //{
-    //    colors[i].x[0] = 0.3;
-	   // colors[i].x[1] = 0.5;
-	   // colors[i].x[2] = 0.7;
-	   // colors[i].x[3] = 1;
-    //    colors[i].r2 = 0.1;
-    //}
-    ////auto c2 = colors + 1;
-    ////memcpy(colors, arr, sizeof(arr));
-    //glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, ssbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 	return true;
 }

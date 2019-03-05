@@ -1,20 +1,78 @@
 #version 430
-struct color1
-{
-    vec4 x; // colors 
-    float r2; float __padding[3];
+#define MAX_RECURSION_DEPTH 5
+#define SHADOW_ENABLED 1
+#define T_MIN 0.05f
+
+#define LIGHT_AMBIENT = 0
+#define LIGHT_POINT = 1
+#define LIGHT_DIRECT = 2
+
+struct quaternion {
+    vec4 v;
+	float w;
+};
+
+struct rt_sphere {
+	vec4 center;
+	vec4 color;
+	float radius;
+	float reflect;
+	int specular;
+};
+
+struct rt_light {
+	vec4 position;
+	vec4 direction;
+
+    int type;
+	float intensity;
+};
+
+struct rt_scene {
+	vec4 camera_pos;
+    quaternion camera_rotation;
+	vec4 bg_color;
+
+	int canvas_width;
+	int canvas_height;
+	float viewport_width;
+	float viewport_height;
+
+	float viewport_dist;
+	int reflect_depth;
+	int sphere_count;
+	int light_count;
 };
 
 layout (local_size_x = 16, local_size_y = 16) in;
 layout (rgba32f, binding = 0) uniform image2D img_output;
 
-layout( std430, binding=4 ) readonly buffer col
+layout( std430, binding=1 ) readonly buffer scene_buf
 {
-    color1 Colors[ ]; // array of structures
+    rt_scene scene;
+};
+
+layout( std430, binding=2 ) readonly buffer spheres_buf
+{
+    rt_sphere spheres[ ];
+};
+
+layout( std430, binding=3 ) readonly buffer lights_buf
+{
+    rt_light lights[ ];
 };
 
 void main () {
-    vec4 color = vec4(Colors[1].r2, 0.0, 0.0, 0.0);
-    ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    imageStore (img_output, pixel_coords, color);
+    uint x = gl_GlobalInvocationID.x;
+	uint y = gl_GlobalInvocationID.y;
+	int width = scene.canvas_width;
+	int height = scene.canvas_height;
+
+	if (x >= width || y >= height) return;
+	int xCartesian = int(x - width / 2.0);
+	int yCartesian = int(height / 2.0 - y);
+
+    //vec4 color = vec4(Colors[1].r2, 0.0, 0.0, 0.0);
+    //ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+    //imageStore (img_output, pixel_coords, color);
 }                                                             
