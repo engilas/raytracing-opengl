@@ -101,7 +101,7 @@ rt_scene create_scene(int width, int height, int spheresCount, int lightCount)
     scene.viewport_dist = 1;
     scene.viewport_height = height / static_cast<float>(min);
     scene.viewport_width = width / static_cast<float>(min);
-	scene.bg_color = {0,0,0.2};
+	scene.bg_color = {0,0,0};
 	scene.reflect_depth = 3;
 
     scene.sphere_count = spheresCount;
@@ -167,7 +167,14 @@ void initBuffers()
 
 int main()
 {
-	GLWrapper glWrapper(wind_width, wind_height, false);
+#define FULLSCREEN
+
+#ifdef FULLSCREEN
+    GLWrapper glWrapper(true);
+#else
+    GLWrapper glWrapper(wind_width, wind_height, false);
+#endif
+
 	glWrapper.init();
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();

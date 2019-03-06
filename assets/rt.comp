@@ -1,13 +1,15 @@
 #version 430
 #define MAX_RECURSION_DEPTH 5
-#define SHADOW_ENABLED 1
 #define T_MIN 0.05f
 #define FLT_MIN 1.175494351e-38
 #define FLT_MAX 3.402823466e+38
 
-#define LIGHT_AMBIENT = 0
-#define LIGHT_POINT = 1
-#define LIGHT_DIRECT = 2
+#define LIGHT_AMBIENT 0
+#define LIGHT_POINT 1
+#define LIGHT_DIRECT 2
+
+#define SHADOW_ENABLED
+//#define DBG
 
 struct rt_sphere {
 	vec4 center;
@@ -61,8 +63,18 @@ layout( std430, binding=3 ) readonly buffer lights_buf
 
 void __dbg()
 {
+	#ifdef DBG
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
     imageStore (img_output, pixel_coords, vec4(1,0,0,0));
+	#endif
+}
+
+void __dbg(float value)
+{
+	#ifdef DBG
+	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+    imageStore (img_output, pixel_coords, vec4(value,value,value,0));
+	#endif
 }
 
 vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
@@ -121,7 +133,7 @@ float IntersectRaySphere(vec4 o, vec4 d, float tMin, int sphereIndex)
 
 	if (discr < 0)
 	{
-		return -1;
+		return FLT_MAX;
 	}
 	else
 	{
@@ -138,7 +150,7 @@ float IntersectRaySphere(vec4 o, vec4 d, float tMin, int sphereIndex)
 	}
 	else 
 	{
-		return -1;
+		return FLT_MAX;
 	}
 }
 
@@ -156,13 +168,58 @@ void ClosestIntersection(vec4 o, vec4 d, float tMin, float tMax, out float t, ou
 
 		if (intersect >= tMin && intersect <= tMax && intersect < closest)
 		{
-			closest = t;
+			closest = intersect;
 			sphere_index = i;
 		}
 	}
 
 	t = closest;
 	sphereIndex = sphere_index;
+}
+
+float ComputeLighting(vec4 point, vec4 normal, vec4 view, int specular)
+{
+	float sum = 0.0;
+	vec4 L;
+
+	for (int i = 0; i < scene.light_count; i++)
+	{
+		if (lights[i].type == LIGHT_AMBIENT) {
+			sum += lights[i].intensity;
+		}
+		else {
+			float tMax = 0.0;
+			if (lights[i].type == LIGHT_POINT) {
+				L = lights[i].position - point;
+				tMax = 1.0;
+			}
+			else if (lights[i].type == LIGHT_DIRECT) {
+				L = lights[i].direction;
+				tMax = FLT_MAX;
+			}
+
+			#ifdef SHADOW_ENABLED
+			int sphereIndex;
+			float t;
+			ClosestIntersection(point, L, T_MIN, tMax, t, sphereIndex);
+			if (sphereIndex != -1) continue;
+			#endif
+			
+			float nDotL = dot(normal, L);
+			if (nDotL > 0) {
+				sum += lights[i].intensity * nDotL / (length(normal) * length(L));
+			}
+			if (specular <= 0) continue;
+			
+			vec4 r = ReflectRay(L, normal);
+			float rDotV = dot (r, view);
+			if (rDotV > 0)
+			{
+				sum += lights[i].intensity * pow(rDotV / (length(r) * length(view)), specular);
+			}
+		}
+	}
+	return sum;
 }
 
 vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
@@ -177,18 +234,15 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 
 	int recursionCount = 0;
 
-	//for (int i = 0; i < scene.reflect_depth; i++)
-	//{
+	for (int i = 0; i < scene.reflect_depth; i++)
+	{
 		ClosestIntersection(o, d, tMin, tMax, closest, sphere_index);
-		
 		if (sphere_index == -1)
 		{
-			return scene.bg_color;
-
-			// colors[recursionCount] = scene->bg_color;
-			// reflects[recursionCount] = 0;
-			// ++recursionCount;
-			// break;
+			colors[recursionCount] = scene.bg_color;
+			reflects[recursionCount] = 0;
+			++recursionCount;
+			break;
 		}
 		vec4 p = o + (d * closest);
 		vec4 normal = normalize(p - spheres[sphere_index].center);
@@ -199,34 +253,34 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 		// 	normal = -normal;
 		// }
 		vec4 view = -d;
-		return spheres[sphere_index].color;
+		//return spheres[sphere_index].color;
+		//return spheres[sphere_index].color * ComputeLighting(p, normal, view, spheres[sphere_index].specular);
+		colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p, normal, view, spheres[sphere_index].specular);
+		reflects[recursionCount] = spheres[sphere_index].reflect;
+		++recursionCount;
+		if (spheres[sphere_index].reflect <= 0.0)
+			break;
 
-		// colors[recursionCount] = sphere->color * ComputeLighting(p, normal, scene, view, sphere->specular);
-		// reflects[recursionCount] = sphere->reflect;
-		// ++recursionCount;
-		// if (sphere->reflect <= 0 || scene->reflect_depth == 1)
-		// 	break;
+		if (i < scene.reflect_depth - 1) {
+			//setup for next iteration
+			o = p;
+			d = ReflectRay(view, normal);
+		}
+	}
 
-		// if (i < scene->reflect_depth - 1) {
-		// 	//setup for next iteration
-		// 	o = p;
-		// 	d = ReflectRay(view, normal);
-		// }
-	//}
+	if (recursionCount <= 1)
+	 	return colors[0];
 
-	// if (recursionCount <= 1)
-	//  	return colors[0];
+	vec4 totalColor = colors[recursionCount - 1];
 
-	// float4 totalColor = colors[recursionCount - 1];
+	for(int i = recursionCount - 2; i >= 0; i--)
+	{
+		float reflect = reflects[i];
+		vec4 prevColor = colors[i];
+		totalColor = prevColor * (1 - reflect) + totalColor * reflect;
+	}
 
-	// for(int i = recursionCount - 2; i >= 0; i--)
-	// {
-	// 	float reflect = reflects[i];
-	// 	float4 prevColor = colors[i];
-	// 	totalColor = prevColor * (1 - reflect) + totalColor * reflect;
-	// }
-
-	// return totalColor;
+	return totalColor;
 }
 
 void main () 
@@ -236,5 +290,7 @@ void main ()
 
 	vec4 d = CanvasToViewport(pixel_coords);
 	vec4 color = TraceRay(scene.camera_pos, d, T_MIN, FLT_MAX);
+	#ifndef DBG
     imageStore (img_output, pixel_coords,color);
+	#endif
 }                                                             
