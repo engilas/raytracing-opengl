@@ -1,4 +1,5 @@
 #version 430
+
 #define MAX_RECURSION_DEPTH 5
 #define T_MIN 0.05f
 #define FLT_MIN 1.175494351e-38
@@ -140,18 +141,33 @@ float IntersectRaySphere(vec4 o, vec4 d, float tMin, int sphereIndex)
 		t1 = (-k2 + sqrt(discr)) / (2 * k1);
 		t2 = (-k2 - sqrt(discr)) / (2 * k1);
 	}
+	// float t = -1;
+	// if (t1 < t && t1 >= tMin)
+	// {
+	// 	t = t1;
+	// }
+	// if (t2 < t && t2 >= tMin)
+	// {
+	// 	t = t2;
+	// }
+	// return t;
+
+
+
+	// float t = -1;
 	if (t1 <= t2 && t1 >= tMin)
 	{
 		return t1;
 	}
-	else if (t2 <= t1 && t2 >= tMin)
-	{
-		return t2;
-	}
-	else 
-	{
-		return FLT_MAX;
-	}
+	else return t2;
+	// else if (t2 <= t1 && t2 >= tMin)
+	// {
+	// 	return t2;
+	// }
+	// else 
+	// {
+	// 	return -1;
+	// }
 }
 
 vec4 ReflectRay(vec4 r, vec4 normal) {
@@ -166,7 +182,7 @@ void ClosestIntersection(vec4 o, vec4 d, float tMin, float tMax, out float t, ou
 	{
 		float intersect = IntersectRaySphere(o, d, tMin, i);
 
-		if (intersect >= tMin && intersect <= tMax && intersect < closest)
+		if (intersect >= tMin && intersect < tMax && intersect < closest)
 		{
 			closest = intersect;
 			sphere_index = i;
