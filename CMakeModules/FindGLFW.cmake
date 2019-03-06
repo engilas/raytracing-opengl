@@ -43,7 +43,7 @@ FIND_LIBRARY(GLFW_LIBRARY DOC "Absolute path to GLFW library."
   $ENV{GLFW_ROOT}
   PATH_SUFFIXES lib/x64 release debug #For finding the library file under the root of the glfw expanded archive, typically on Windows.
   PATHS
-  common/GLFW/lib-vc2015
+  common/GLFW
   /usr/lib
   /usr/lib64
   /usr/lib/x86_64-linux-gnu
