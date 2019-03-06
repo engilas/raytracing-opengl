@@ -22,9 +22,6 @@ GLWrapper::GLWrapper(bool fullScreen)
 
 GLWrapper::~GLWrapper()
 {
-	glfwDestroyWindow(window);
-
-	glfwTerminate();
 }
 
 int GLWrapper::getWidth()
