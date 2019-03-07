@@ -1,28 +1,8 @@
 #include <glad/glad.h>
 
-//#include "OpenCLUtil.h"
-//#define __CL_ENABLE_EXCEPTIONS
-//#include "cl.hpp"
-
-//#ifdef OS_WIN
-//#define GLFW_EXPOSE_NATIVE_WIN32
-//#define GLFW_EXPOSE_NATIVE_WGL
-//#endif
-//
-//#ifdef OS_LNX
-//#define GLFW_EXPOSE_NATIVE_X11
-//#define GLFW_EXPOSE_NATIVE_GLX
-//#endif
-
 #include <GLFW/glfw3.h>
 
-#include "OpenGLUtil.h"
-
 #include <cstdlib>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
 #include <chrono>
 #include "GLWrapper.h"
 
@@ -33,9 +13,139 @@
 static int wind_width = 1024;
 static int wind_height= 1024;
 
+bool w_pressed = false;
+bool a_pressed = false;
+bool s_pressed = false;
+bool d_pressed = false;
+bool ctrl_pressed = false;
+bool shift_pressed = false;
+bool space_pressed = false;
+
+float lastX = 0;
+float lastY = 0;
+float pitch = 0;
+float yaw = 0;
+
 GLuint sceneSsbo = 0;
 GLuint sphereSsbo = 0;
 GLuint lightSsbo = 0;
+
+std::vector<rt_sphere> spheres;
+std::vector<rt_light> lights;
+rt_scene scene;
+
+void multiplyVector(float v[3], float s) {
+	v[0] *= s;
+	v[1] *= s;
+	v[2] *= s;
+}
+
+void addVector(float4 &v1, const float v2[3]) {
+	v1.x += v2[0];
+	v1.y += v2[1];
+	v1.z += v2[2];
+}
+
+void moveCamera(Quaternion<float> &q, const float direction[3], float4 &vector, float speed) {
+    float tmp[3] = {direction[0], direction[1], direction[2]};
+	q.QuatRotation(tmp);
+	multiplyVector(tmp, speed);
+	addVector(vector, tmp);
+}
+
+void moveCamera(const float direction[3], float4 &vector, float speed) {
+	float tmp[3] = {direction[0], direction[1], direction[2]};
+	multiplyVector(tmp, speed);
+	addVector(vector, tmp);
+}
+
+void UpdateScene(rt_scene &scene, float frameRate) 
+{
+	const float xAxis[3] = { 1, 0, 0 };
+	const float yAxis[3] = { 0, 1, 0 };
+	const float zAxis[3] = { 0, 0, 1 };
+	const float PI_F = 3.14159265358979f;
+
+	Quaternion<float> qX(xAxis, -pitch * PI_F / 180.0f);
+	Quaternion<float> qY(yAxis, yaw * PI_F / 180.0f);
+	Quaternion<float> q = qY * qX;
+	scene.quat_camera_rotation = q.GetStruct();
+
+
+	auto speed = frameRate;
+	if (shift_pressed)
+		speed *= 3;
+
+	if (w_pressed) 
+		moveCamera(q, zAxis, scene.camera_pos, speed);
+	if (a_pressed)
+		moveCamera(q, xAxis, scene.camera_pos, -speed);
+	if (s_pressed)
+		moveCamera(q, zAxis, scene.camera_pos, -speed);
+	if (d_pressed)
+		moveCamera(q, xAxis, scene.camera_pos, speed);
+	
+	if (space_pressed)
+		moveCamera(yAxis, scene.camera_pos, speed);
+	if (ctrl_pressed)
+		moveCamera(yAxis, scene.camera_pos, -speed);
+}
+
+static void glfw_key_callback(GLFWwindow* wind, int key, int scancode, int action, int mods)
+{
+    if (action == GLFW_PRESS || action == GLFW_RELEASE) {
+		if (key == GLFW_KEY_ESCAPE)
+			glfwSetWindowShouldClose(wind, GL_TRUE);
+
+		bool pressed = action == GLFW_PRESS;
+
+		if (key == GLFW_KEY_W)
+			w_pressed = pressed;
+		else if (key == GLFW_KEY_S)
+			s_pressed = pressed;
+		else if (key == GLFW_KEY_A)
+			a_pressed = pressed;
+		else if (key == GLFW_KEY_D)
+			d_pressed = pressed;
+		else if (key == GLFW_KEY_SPACE)
+			space_pressed = pressed;
+		else if (key == GLFW_KEY_LEFT_CONTROL)
+			ctrl_pressed = pressed;
+		else if (key == GLFW_KEY_LEFT_SHIFT)
+			shift_pressed = pressed;
+    }
+}
+
+bool firstMouse = true;
+
+static void glfw_mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+
+	if (firstMouse)
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; 
+	lastX = xpos;
+	lastY = ypos;
+
+
+
+	float sensitivity = 0.05f;
+	xoffset *= sensitivity;
+	yoffset *= sensitivity;
+
+	yaw += xoffset;
+	pitch += yoffset;
+
+	if (pitch > 89.0f)
+		pitch = 89.0f;
+	if (pitch < -89.0f)
+		pitch = -89.0f;
+}
 
 rt_sphere create_spheres(float4 center, float4 color, float radius, int specular, float reflect)
 {
@@ -113,10 +223,14 @@ rt_scene create_scene(int width, int height, int spheresCount, int lightCount)
     return scene;
 }
 
+static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height)
+{
+    glViewport(0,0,width,height);
+}
+
 void initBuffers()
 {
-    std::vector<rt_sphere> spheres;
-	std::vector<rt_light> lights;
+    
 
     spheres.push_back(create_spheres({ 2,0,4 }, { 0,1,0 }, 1, 10, 0.2f));
 	spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f));
@@ -127,11 +241,11 @@ void initBuffers()
 	lights.push_back(create_light(point, 0.6f, { 2,1,0 }, { 0 }));
 	lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));
 
-    auto scene = create_scene(wind_width, wind_height, spheres.size(), lights.size());
+    scene = create_scene(wind_width, wind_height, spheres.size(), lights.size());
 
 	glGenBuffers(1, &sceneSsbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sceneSsbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_scene) , &scene, GL_STATIC_DRAW);
+	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_scene) , NULL, GL_STATIC_DRAW);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sceneSsbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
@@ -165,6 +279,14 @@ void initBuffers()
     
 }
 
+void updateBuffers()
+{
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, sceneSsbo);
+    GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+    memcpy(p, &scene, sizeof(rt_scene));
+    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+}
+
 int main()
 {
 #define FULLSCREEN
@@ -176,20 +298,34 @@ int main()
 #endif
 
 	glWrapper.init();
+
+    glfwSetInputMode(glWrapper.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(glWrapper.window, glfw_mouse_callback);
+    glfwSetKeyCallback(glWrapper.window,glfw_key_callback);
+    glfwSetFramebufferSizeCallback(glWrapper.window,glfw_framebuffer_size_callback);
+
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();
     initBuffers();
 
 	glfwSwapInterval(0);
 
+    const auto start = std::chrono::steady_clock::now();
+    auto currentTime = std::chrono::steady_clock::now();
+    int frames_count = 0;
+
     while (!glfwWindowShouldClose(glWrapper.window))
     {
+        ++frames_count;
+        auto newTime = std::chrono::steady_clock::now();
+		std::chrono::duration<double> frameTime = (newTime - currentTime);
+		currentTime = newTime;
+
+        UpdateScene(scene, frameTime.count());
+        updateBuffers();
         glWrapper.draw();
 		glfwSwapBuffers(glWrapper.window);
         glfwPollEvents();
-		if (GLFW_PRESS == glfwGetKey(glWrapper.window, GLFW_KEY_ESCAPE)) {
-			glfwSetWindowShouldClose(glWrapper.window, 1);
-		}
     }
 
 	glWrapper.stop(); // stop glfw, close window
