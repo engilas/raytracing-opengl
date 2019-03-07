@@ -1,7 +1,11 @@
 #version 430
 
 #define MAX_RECURSION_DEPTH 5
-#define T_MIN 0.05f
+
+#define T_MIN 0.01f
+#define REFLECT_BIAS 0.05f
+#define SHADOW_BIAS 0.0001f
+
 #define FLT_MIN 1.175494351e-38
 #define FLT_MAX 3.402823466e+38
 
@@ -251,8 +255,8 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 			normal = -normal;
 		}
 		vec4 view = -d;
-		vec4 offset = normal * T_MIN;
-		colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p + offset, normal, view, spheres[sphere_index].specular);
+		//vec4 offset = normal * REFLECT_BIAS;
+		colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
 		reflects[recursionCount] = spheres[sphere_index].reflect;
 		++recursionCount;
 		if (spheres[sphere_index].reflect <= 0.0)
@@ -261,7 +265,7 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 		if (i < scene.reflect_depth - 1) {
 			//setup for next iteration
 			o = p;
-			d = ReflectRay(view, normal) + offset;
+			d = ReflectRay(view, normal) + normal * REFLECT_BIAS;
 		}
 	}
 
