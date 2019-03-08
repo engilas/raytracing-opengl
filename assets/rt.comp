@@ -2,8 +2,8 @@
 
 #define MAX_RECURSION_DEPTH 5
 
-#define T_MIN 0.01f
-#define REFLECT_BIAS 0.05f
+#define T_MIN 0.05f
+#define REFLECT_BIAS 0.001f
 #define SHADOW_BIAS 0.0001f
 
 #define FLT_MIN 1.175494351e-38

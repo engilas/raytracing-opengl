@@ -13,6 +13,7 @@ typedef struct {
 } rt_sphere;
 
 typedef enum { ambient, point, direct } lightType;
+typedef enum { sphere } primitiveType;
 
 typedef struct {
 	float4 position;
@@ -39,3 +40,11 @@ typedef struct {
 	int sphere_count;
 	int light_count;
 } rt_scene;
+
+typedef struct
+{
+	void* primitive;
+	primitiveType type;
+	float a;
+	float b;
+} rotating_primitive;
