@@ -44,6 +44,7 @@ private:
 	void addVector(float4 & v1, const float v2[3]);
 	void moveCamera(Quaternion<float>& q, const float direction[3], float4 & vector, float speed);
 	void moveCamera(const float direction[3], float4 & vector, float speed);
+	void ProcessRotations(float frameRate);
 	void UpdateScene(float frameRate);
 	void glfw_key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);

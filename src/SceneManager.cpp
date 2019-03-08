@@ -66,6 +66,27 @@ void SceneManager::moveCamera(const float direction[3], float4 &vector, float sp
 	addVector(vector, tmp);
 }
 
+void SceneManager::ProcessRotations(float frameRate)
+{
+	for (int i = 0; i < rotating_primitives.size(); ++i)
+	{
+		auto rot = rotating_primitives.data() + i;
+		switch (rot->type)
+		{
+		case sphere:
+		{
+			auto sphere = static_cast<rt_sphere*>(rot->primitive);
+			rot->current += frameRate * rot->speed;
+
+			sphere->center.x = rot->a * cos(rot->current);
+			sphere->center.z = rot->b * sin(rot->current);
+
+			break;
+		}
+		}
+	}
+}
+
 void SceneManager::UpdateScene(float frameRate)
 {
 	const float xAxis[3] = { 1, 0, 0 };
@@ -96,6 +117,8 @@ void SceneManager::UpdateScene(float frameRate)
 		moveCamera(yAxis, scene.camera_pos, speed);
 	if (ctrl_pressed)
 		moveCamera(yAxis, scene.camera_pos, -speed);
+
+	ProcessRotations(frameRate);
 }
 
 void SceneManager::glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -229,9 +252,6 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 	scene.sphere_count = spheresCount;
 	scene.light_count = lightCount;
 
-	//std::copy(spheres.begin(), spheres.end(), scene.spheres);
-	//std::copy(lights.begin(), lights.end(), scene.lights);
-
 	return scene;
 }
 
@@ -246,9 +266,8 @@ void SceneManager::initBuffers()
 	lights.push_back(create_light(point, 0.6f, { 2,1,0 }, { 0 }));
 	lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));
 
-	auto rotation_sphere = create_spheres({ 0,0.5,0 },  getColor(66, 247, 136), 0.5, 50, 0.2f);
-	spheres.push_back(rotation_sphere);
-	rotating_primitives.push_back({ &rotation_sphere, sphere, 5, 5 });
+	spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.2f));
+	rotating_primitives.push_back({ &spheres.back(), sphere, 9, 4, 0, 1 });
 
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size());
 
@@ -291,9 +310,28 @@ void SceneManager::initBuffers()
 void SceneManager::updateBuffers() const
 {
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sceneSsbo);
-	GLvoid* p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-	memcpy(p, &scene, sizeof(rt_scene));
+	GLvoid* scene_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+	memcpy(scene_p, &scene, sizeof(rt_scene));
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
+	GLvoid* spheres_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+	memcpy(spheres_p, spheres.data(), sizeof(rt_sphere) * spheres.size());
+	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+
+	//GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
+	//auto spheres = (rt_sphere*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(arr), bufMask);
+	//for (int i = 0; i < 2; ++i)
+	//{
+	//    colors[i].x[0] = 0.3;
+	//    colors[i].x[1] = 0.5;
+	//    colors[i].x[2] = 0.7;
+	//    colors[i].x[3] = 1;
+	//    colors[i].r2 = 0.1;
+	//}
+	////auto c2 = colors + 1;
+	////memcpy(colors, arr, sizeof(arr));
+	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
 
 float4 SceneManager::getColor(float r, float g, float b)

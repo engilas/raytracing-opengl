@@ -47,4 +47,6 @@ typedef struct
 	primitiveType type;
 	float a;
 	float b;
+	float current;
+	float speed;
 } rotating_primitive;

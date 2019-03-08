@@ -1,18 +1,12 @@
 #include <glad/glad.h>
 
 #include <GLFW/glfw3.h>
-
-#include <cstdlib>
 #include <chrono>
 #include "GLWrapper.h"
-
-#include "scene.h"
-#include "quaternion.h"
-#include <vector>
 #include "SceneManager.h"
 
-static int wind_width = 1024;
-static int wind_height= 1024;
+static int wind_width = 640;
+static int wind_height= 640;
 
 
 
