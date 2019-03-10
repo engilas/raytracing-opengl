@@ -91,6 +91,8 @@ void GLWrapper::draw()
 	//glDispatchCompute(w, h, 1); // 512^2 threads in blocks of 16^2
 	checkErrors("Dispatch compute shader");
 
+	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
     glUseProgram(renderHandle);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 	//swapBuffers();

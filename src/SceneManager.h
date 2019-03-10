@@ -49,7 +49,7 @@ private:
 	void glfw_key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
 	void glfw_mouse_callback(GLFWwindow * window, double xpos, double ypos);
-	rt_sphere create_spheres(float4 center, float4 color, float radius, int specular, float reflect);
+	rt_sphere create_spheres(float4 center, float4 color, float radius, int specular, float reflect, float refract);
 	rt_light create_light(lightType type, float intensity, float4 position, float4 direction);
 	rt_scene create_scene(int width, int height, int spheresCount, int lightCount);
 	void initBuffers();

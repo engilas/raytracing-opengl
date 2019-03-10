@@ -182,7 +182,7 @@ void SceneManager::glfw_mouse_callback(GLFWwindow* window, double xpos, double y
 		pitch = -89.0f;
 }
 
-rt_sphere SceneManager::create_spheres(float4 center, float4 color, float radius, int specular, float reflect)
+rt_sphere SceneManager::create_spheres(float4 center, float4 color, float radius, int specular, float reflect, float refract)
 {
 	rt_sphere sphere = {};
 
@@ -191,6 +191,7 @@ rt_sphere SceneManager::create_spheres(float4 center, float4 color, float radius
 	sphere.radius = radius;
 	sphere.specular = specular;
 	sphere.reflect = reflect;
+	sphere.refract = refract;
 
 	return sphere;
 }
@@ -257,16 +258,16 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 
 void SceneManager::initBuffers()
 {
-	spheres.push_back(create_spheres({ 2,0,4 }, { 0,1,0 }, 1, 10, 0.2f));
-	spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f));
-	spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f));
-	spheres.push_back(create_spheres({ 0,-5001,3 }, { 1,1,0 }, 5000, 50, 0.2f));
+	spheres.push_back(create_spheres({ 2,0,4 }, { 0,1,0 }, 1, 10, 0.2f, 0));
+	spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 1.9));
+	spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f, 1.5));
+	spheres.push_back(create_spheres({ 0,-5001,3 }, { 1,1,0 }, 5000, 50, 0.2f, 0));
 
 	lights.push_back(create_light(ambient, 0.2f, { 0 }, { 0 }));
 	lights.push_back(create_light(point, 0.6f, { 2,1,0 }, { 0 }));
 	lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));
 
-	spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.2f));
+	spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.2f, 1.7));
 	rotating_primitives.push_back({ &spheres.back(), sphere, 9, 4, 0, 1 });
 
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size());
@@ -288,23 +289,6 @@ void SceneManager::initBuffers()
 	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_light) * lights.size(), lights.data(), GL_STATIC_DRAW);
 	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, lightSsbo);
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-
-	//GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-	//auto colors = (color*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(arr), bufMask);
-	//for (int i = 0; i < 2; ++i)
-	//{
-	//    colors[i].x[0] = 0.3;
-	   // colors[i].x[1] = 0.5;
-	   // colors[i].x[2] = 0.7;
-	   // colors[i].x[3] = 1;
-	//    colors[i].r2 = 0.1;
-	//}
-	////auto c2 = colors + 1;
-	////memcpy(colors, arr, sizeof(arr));
-	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
-
 }
 
 void SceneManager::updateBuffers() const

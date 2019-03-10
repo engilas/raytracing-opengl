@@ -2,7 +2,7 @@
 
 #define MAX_RECURSION_DEPTH 5
 
-#define T_MIN 0.05f
+#define T_MIN 0.001f
 #define REFLECT_BIAS 0.001f
 #define SHADOW_BIAS 0.0001f
 
@@ -22,6 +22,7 @@ struct rt_sphere {
 	float radius;
 	float reflect;
 	int specular;
+	float refract;
 };
 
 struct rt_light {
@@ -123,7 +124,6 @@ vec4 CanvasToViewport(ivec2 pixel_coords)
 
 float IntersectRaySphere(vec4 o, vec4 d, float tMin, int sphereIndex)
 {
-	//tMin = 0.05;
 	float t1, t2;
 
 	vec4 c = spheres[sphereIndex].center;
@@ -224,6 +224,70 @@ float ComputeLighting(vec4 point, vec4 normal, vec4 view, int specular)
 	return sum;
 }
 
+void swap(inout float a, inout float b)
+{
+	float tmp = a;
+	a = b;
+	b = tmp;
+}
+
+bool refract2(in vec4 v, in vec4 n, in float ni_over_nt, out vec4 refracted) {
+  vec4 uv = normalize(v);
+  float dt = dot(uv, n);
+  float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
+  if (discriminant > 0) {
+    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
+    return true;
+  } else {
+    return false;
+  }
+}
+
+vec4 refract(vec4 I, vec4 N, float ior) 
+{ 
+    float cosi = clamp(-1, 1, dot(I, N)); 
+    float etai = 1, etat = ior; 
+    vec4 n = N; 
+    if (cosi < 0) { cosi = -cosi; } 
+	else 
+	{ 
+		float tmp = etai;
+		etai = etat;
+		etat = tmp;
+		//swap(etai, etat);
+		n= -N; 
+	} 
+    float eta = etai / etat; 
+    float k = 1 - eta * eta * (1 - cosi * cosi); 
+    return k < 0.0 ? vec4(0) : eta * I + (eta * cosi - sqrt(k)) * n; 
+}
+
+// void fresnel(vec4 I, vec4 N, float ior, out float kr) 
+// { 
+//     float cosi = clamp(-1, 1, dot(I, N)); 
+//     float etai = 1, etat = ior; 
+//     if (cosi > 0) 
+// 	{ 
+// 		float tmp = etai;
+// 		etai = etat;
+// 		etat = tmp;
+// 		//swap(etai, etat); 
+// 	} 
+//     // Compute sini using Snell's law
+//     float sint = etai / etat * sqrt(max(0.0, 1 - cosi * cosi)); 
+//     // Total internal reflection
+//     if (sint >= 1) { 
+//         kr = 1; 
+//     } 
+//     else { 
+//         float cost = sqrt(max(0.0, 1 - sint * sint)); 
+//         cosi = abs(cosi); 
+//         float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost)); 
+//         float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
+//         kr = (Rs * Rs + Rp * Rp) / 2; 
+//     }
+// } 
+
 vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 {
 	if (scene.reflect_depth == 0) return vec4(0,0,0,0);
@@ -233,6 +297,7 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 
 	vec4 colors[MAX_RECURSION_DEPTH];
     float reflects[MAX_RECURSION_DEPTH];
+	//vec4 refracts[MAX_RECURSION_DEPTH];
 
 	int recursionCount = 0;
 
@@ -256,16 +321,49 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 		}
 		vec4 view = -d;
 		//vec4 offset = normal * REFLECT_BIAS;
-		colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
-		reflects[recursionCount] = spheres[sphere_index].reflect;
-		++recursionCount;
-		if (spheres[sphere_index].reflect <= 0.0)
-			break;
 
-		if (i < scene.reflect_depth - 1) {
-			//setup for next iteration
-			o = p;
-			d = ReflectRay(view, normal) + normal * REFLECT_BIAS;
+		float refraction = spheres[sphere_index].refract;
+		if (refraction > 0)
+		{
+			--i;
+			//reflects[recursionCount] = 0;
+			vec4 refractionColor = vec4(0);
+			// compute fresnel
+			float kr; 
+			//fresnel(d, normal, refraction, kr); 
+			bool outside = dot (d, normal) < 0; 
+			vec4 bias = REFLECT_BIAS * normal;
+			// compute refraction if it is not a case of total internal reflection
+			//if (kr < 1) { 
+				vec4 refractionDirection = normalize(refract(d, normal, refraction)); 
+				vec4 refractionRayOrig = outside ? p - bias : p + bias; 
+				//refractionColor = castRay(refractionRayOrig, refractionDirection, objects, lights, options, depth + 1); 
+				o = refractionRayOrig;
+				d = refractionDirection;
+				//break;
+			//} 
+	
+			// Vec3f reflectionDirection = reflect(dir, hitNormal).normalize(); 
+			// Vec3f reflectionRayOrig = outside ? hitPoint + bias : hitPoint - bias; 
+			// Vec3f reflectionColor = castRay(reflectionRayOrig, reflectionDirection, objects, lights, options, depth + 1); 
+	
+			// // mix the two
+			// hitColor += reflectionColor * kr + refractionColor * (1 - kr); 
+		}
+		else 
+		{
+			colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
+			reflects[recursionCount] = spheres[sphere_index].reflect;
+
+			++recursionCount;
+			if (spheres[sphere_index].reflect <= 0.0)
+				break;
+
+			if (i < scene.reflect_depth - 1) {
+				//setup for next iteration
+				o = p + normal * REFLECT_BIAS;
+				d = ReflectRay(view, normal);
+			}
 		}
 	}
 

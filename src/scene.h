@@ -5,11 +5,11 @@
 typedef struct {
 	float4 center;
 	float4 color;
+
 	float radius;
 	float reflect;
 	int specular;
-
-    float __padding[1];
+	float refract;
 } rt_sphere;
 
 typedef enum { ambient, point, direct } lightType;
