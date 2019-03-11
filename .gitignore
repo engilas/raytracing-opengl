@@ -42,3 +42,6 @@ CMakeFiles/
 *.vcxproj*
 *.sln
 CMakeCache.txt
+
+#libs
+!common/*
