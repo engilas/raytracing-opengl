@@ -157,7 +157,7 @@ float IntersectRaySphere(vec4 o, vec4 d, float tMin, int sphereIndex)
 }
 
 vec4 ReflectRay(vec4 r, vec4 normal) {
-	return 2 * normal * dot(r, normal) - r;
+	return normalize(2 * normal * dot(r, normal) - r);
 }
 
 void ClosestIntersection(vec4 o, vec4 d, float tMin, float tMax, out float t, out int sphereIndex) {
@@ -262,31 +262,55 @@ vec4 refract(vec4 I, vec4 N, float ior)
     return k < 0.0 ? vec4(0) : eta * I + (eta * cosi - sqrt(k)) * n; 
 }
 
-// void fresnel(vec4 I, vec4 N, float ior, out float kr) 
-// { 
-//     float cosi = clamp(-1, 1, dot(I, N)); 
-//     float etai = 1, etat = ior; 
-//     if (cosi > 0) 
-// 	{ 
-// 		float tmp = etai;
-// 		etai = etat;
-// 		etat = tmp;
-// 		//swap(etai, etat); 
-// 	} 
-//     // Compute sini using Snell's law
-//     float sint = etai / etat * sqrt(max(0.0, 1 - cosi * cosi)); 
-//     // Total internal reflection
-//     if (sint >= 1) { 
-//         kr = 1; 
-//     } 
-//     else { 
-//         float cost = sqrt(max(0.0, 1 - sint * sint)); 
-//         cosi = abs(cosi); 
-//         float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost)); 
-//         float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
-//         kr = (Rs * Rs + Rp * Rp) / 2; 
-//     }
-// } 
+void fresnel(vec4 I, vec4 N, float ior, out float kr) 
+{ 
+    float cosi = clamp(-1, 1, dot(I, N)); 
+    float etai = 1, etat = ior; 
+    if (cosi > 0) 
+	{ 
+		float tmp = etai;
+		etai = etat;
+		etat = tmp;
+		//swap(etai, etat); 
+	} 
+    // Compute sini using Snell's law
+    float sint = etai / etat * sqrt(max(0.0, 1 - cosi * cosi)); 
+    // Total internal reflection
+    if (sint >= 1) { 
+        kr = 1; 
+    } 
+    else { 
+        float cost = sqrt(max(0.0, 1 - sint * sint)); 
+        cosi = abs(cosi); 
+        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost)); 
+        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
+        kr = (Rs * Rs + Rp * Rp) / 2; 
+    }
+} 
+
+bool TraceRayOneHit(vec4 o, vec4 d, float tMin, float tMax, out vec4 color) 
+{
+	float closest;
+	int sphere_index;
+	ClosestIntersection(o, d, tMin, tMax, closest, sphere_index);
+	if (sphere_index == -1)
+	{
+		color = scene.bg_color;
+		return true;
+	}
+	if (spheres[sphere_index].refract > 0) return false;
+
+	vec4 p = o + (d * closest);
+	vec4 normal = normalize(p - spheres[sphere_index].center);
+	vec4 view = -d;
+	if (dot(normal, d) > 0)
+	{
+		normal = -normal;
+	}
+
+	color = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
+	return true;
+}
 
 vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 {
@@ -297,7 +321,8 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 
 	vec4 colors[MAX_RECURSION_DEPTH];
     float reflects[MAX_RECURSION_DEPTH];
-	//vec4 refracts[MAX_RECURSION_DEPTH];
+	bool isRefract[MAX_RECURSION_DEPTH];
+	vec4 refracts[MAX_RECURSION_DEPTH];
 
 	int recursionCount = 0;
 
@@ -314,11 +339,6 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 		vec4 p = o + (d * closest);
 		vec4 normal = normalize(p - spheres[sphere_index].center);
 
-		//good for surfaces, bad for box, sphere
-		if (dot(normal, d) > 0)
-		{
-			normal = -normal;
-		}
 		vec4 view = -d;
 		//vec4 offset = normal * REFLECT_BIAS;
 
@@ -326,32 +346,40 @@ vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
 		if (refraction > 0)
 		{
 			--i;
+
+			bool outside = dot (d, normal) < 0; 
+			vec4 bias = REFLECT_BIAS * normal;
+
+			vec4 reflectionDirection = ReflectRay(view, normal); 
+			vec4 reflectionRayOrig = outside ? p + bias : p - bias; 
+			// vec4 reflectionColor = castRay(reflectionRayOrig, reflectionDirection, objects, lights, options, depth + 1); 
+
 			//reflects[recursionCount] = 0;
 			vec4 refractionColor = vec4(0);
 			// compute fresnel
 			float kr; 
-			//fresnel(d, normal, refraction, kr); 
-			bool outside = dot (d, normal) < 0; 
-			vec4 bias = REFLECT_BIAS * normal;
+			fresnel(d, normal, refraction, kr);
 			// compute refraction if it is not a case of total internal reflection
-			//if (kr < 1) { 
+			if (kr < 1) { 
 				vec4 refractionDirection = normalize(refract(d, normal, refraction)); 
 				vec4 refractionRayOrig = outside ? p - bias : p + bias; 
 				//refractionColor = castRay(refractionRayOrig, refractionDirection, objects, lights, options, depth + 1); 
 				o = refractionRayOrig;
 				d = refractionDirection;
 				//break;
-			//} 
-	
-			// Vec3f reflectionDirection = reflect(dir, hitNormal).normalize(); 
-			// Vec3f reflectionRayOrig = outside ? hitPoint + bias : hitPoint - bias; 
-			// Vec3f reflectionColor = castRay(reflectionRayOrig, reflectionDirection, objects, lights, options, depth + 1); 
+			}
 	
 			// // mix the two
 			// hitColor += reflectionColor * kr + refractionColor * (1 - kr); 
 		}
 		else 
 		{
+			//good for surfaces, bad for box, sphere
+			if (dot(normal, d) > 0)
+			{
+				normal = -normal;
+			}
+
 			colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
 			reflects[recursionCount] = spheres[sphere_index].reflect;
 
