@@ -54,370 +54,253 @@ layout (rgba32f, binding = 0) uniform image2D img_output;
 
 layout( std430, binding=1 ) readonly buffer scene_buf
 {
-    rt_scene scene;
+    rt_scene scenes;
 };
 
 layout( std430, binding=2 ) readonly buffer spheres_buf
 {
-    rt_sphere spheres[ ];
+    rt_sphere spheress[ ];
 };
 
 layout( std430, binding=3 ) readonly buffer lights_buf
 {
-    rt_light lights[ ];
+    rt_light lightss[ ];
+};
+const int iterations = 5;
+const float maxDist = 1000.0;
+const vec3 amb = vec3(1.0);
+const float eps = 1e-3;
+
+struct Camera
+{
+	vec3 up, right, forward;
+	vec3 position;
 };
 
-void __dbg()
+Camera cam;
+vec4 spheres[10];
+vec4 colors[10];
+vec2 materials[10];
+
+void init()
 {
-	#ifdef DBG
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    imageStore (img_output, pixel_coords, vec4(1,0,0,0));
-	#endif
+    // X Y Z Radius
+    spheres[0] = vec4(      0,       0,    -1.5,    0.1);
+    spheres[1] = vec4(      0,    0.25,    -1.5,    0.1);
+    spheres[2] = vec4(      0,    -0.7,    -1.5,    0.3);
+    spheres[3] = vec4(      0,    -0.1,    -1.5,    0.3);
+    spheres[4] = vec4(      0,    -0.1,    -1.5,    0.15);
+    spheres[5] = vec4( 1001.0,       0,       0, 1000.0); 
+    spheres[6] = vec4(-1001.0,       0,       0, 1000.0);
+    spheres[7] = vec4(      0,  1001.0,       0, 1000.0); 
+    spheres[8] = vec4(      0, -1001.0,       0, 1000.0);
+    spheres[9] = vec4(      0,       0, -1002.0, 1000.0);
+
+    //R G B Diffuse
+    colors[0] = vec4(1.0, 0.8, 0.0,-1.0);
+    colors[1] = vec4(0.0, 0.0, 1.0,-1.0);
+    colors[2] = vec4(1.0, 1.0, 1.0, 1.0);
+    colors[3] = vec4(1.0, 1.0, 1.0, 1.0);
+    colors[4] = vec4(1.0, 0.0, 0.0, 1.0);
+    colors[5] = vec4(0.0, 1.0, 0.0, 0.7);
+    colors[6] = vec4(1.0, 0.0, 0.0, 0.7);
+    colors[7] = vec4(1.0, 1.0, 1.0, 0.7);
+    colors[8] = vec4(1.0, 1.0, 1.0, 0.7);
+    colors[9] = vec4(1.0, 1.0, 1.0, 0.7);
+
+    //Reflection Coeff, Refraction index
+    materials[0] = vec2 (0.0, 0.0);
+    materials[1] = vec2 (0.0, 0.0);				
+    materials[2] = vec2 (1.0, 0.0);	
+    materials[3] = vec2 (0.1, 0.8);	
+    materials[4] = vec2 (0.1, 0.8);	
+    materials[5] = vec2 (0.0, 0.0);				
+    materials[6] = vec2 (0.0, 0.0);				
+    materials[7] = vec2 (0.1, 0.0);				
+    materials[8] = vec2 (0.1, 0.0);				
+    materials[9] = vec2 (0.1, 0.0);	
+
+    cam.up       = vec3(0.0, 1.0, 0.0);
+    cam.right    = vec3(1.0, 0.0, 0.0);
+    cam.forward  = vec3(0.0, 0.0,-1.0);
+    cam.position = vec3(0.0, 0.0,-0.2);
 }
 
-void __dbg(float value)
+vec3 getRayDir(vec2 fragCoord)
 {
-	#ifdef DBG
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    imageStore (img_output, pixel_coords, vec4(value,value,value,0));
-	#endif
+  vec2 uv = (fragCoord.xy / iResolution.xy )*2.0 - 1.0;
+  uv.x *= iResolution.x/iResolution.y;                   
+  return normalize(uv.x * cam.right + uv.y * cam.up + cam.forward);
 }
 
-vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
-	vec4 result;
 
-	result.w = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
-	result.x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
-	result.y = q1.w * q2.y + q1.y * q2.w + q1.z * q2.x - q1.x * q2.z;
-	result.z = q1.w * q2.z + q1.z * q2.w + q1.x * q2.y - q1.y * q2.x;
+// The Intersection funtions and shading funcs are taken from inigo's article:
+// http://www.iquilezles.org/www/articles/simplegpurt/simplegpurt.htm
 
-	return result;
+bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
+{
+    bool r = false;
+	vec3 v = ro - sp.xyz;
+	float b = dot(v,rd);
+	float c = dot(v,v) - sp.w*sp.w;
+	t = b*b-c;
+    if( t > 0.0 )
+    {
+        t = -b-sqrt(t);
+        r = (t > 0.0) && (t < tm);
+    }
+    return r;
 }
 
-vec4 Rotate(vec4 q, vec4 v)
+float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec4 col,out vec2 mat)
 {
-	vec4 qv = v;
-	qv.w = 0;
+	float tm = maxDist;
+	float t;
 
-	vec4 mult = multiplyQuaternion(q, qv);
-	float scale = 1 / (q.w * q.w + dot(q, q));
-	vec4 inverse = - scale * q;
-	inverse.w = scale * q.w;
-	vec4 result = multiplyQuaternion(mult, inverse);
+	if(intersectSphere(ro,rd,spheres[0],tm,t)) { ob = spheres[0]; col = colors[0]; tm = t; mat = materials[0]; }
+	if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = colors[1]; tm = t; mat = materials[1]; }
+	if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = colors[2]; tm = t; mat = materials[2]; }
+	if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = colors[3]; tm = t; mat = materials[3]; }
+	if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = colors[4]; tm = t; mat = materials[4]; }
+	if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = colors[5]; tm = t; mat = materials[5]; }
+	if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = colors[6]; tm = t; mat = materials[6]; }
+	if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = colors[7]; tm = t; mat = materials[7]; }
+	if(intersectSphere(ro,rd,spheres[8],tm,t)) { ob = spheres[8]; col = colors[8]; tm = t; mat = materials[8]; }
+    if(intersectSphere(ro,rd,spheres[9],tm,t)) { ob = spheres[9]; col = colors[9]; tm = t; mat = materials[9]; }
 
-	return result;
+	return tm;
 }
 
-vec4 CanvasToViewport(ivec2 pixel_coords)
+bool inShadow(vec3 ro,vec3 rd,float d)
 {
-	int x = int (pixel_coords.x - scene.canvas_width / 2.0);
-	int y = int (pixel_coords.y - scene.canvas_height / 2.0);
+	float t;
+	bool ret = false;
 
-	vec4 result = vec4(
-		x * scene.viewport_width / scene.canvas_width,
-		y * scene.viewport_height / scene.canvas_height,
-		scene.viewport_dist,
-		0);
-	//return result;
-	return Rotate(scene.quat_camera_rotation, result);
+	if(intersectSphere(ro,rd,spheres[2],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[3],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[4],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[5],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[6],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[7],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[8],d,t)){ ret = true; }
+
+	return ret;
 }
 
-float IntersectRaySphere(vec4 o, vec4 d, float tMin, int sphereIndex)
+vec3 calcShade(vec3 pt, vec4 ob, vec4 col,vec2 mat,vec3 n)
 {
-	float t1, t2;
 
-	vec4 c = spheres[sphereIndex].center;
-	float r = spheres[sphereIndex].radius;
-	vec4 oc = o - c;
+	float dist,diff;
+	vec3 lcol,l;
 
-	float k1 = dot(d, d);
-	float k2 = 2 * dot(oc, d);
-	float k3 = dot(oc, oc) - r * r;
-	float discr = k2 * k2 - 4 * k1 * k3;
+	vec3 color = vec3(0.0);
+	vec3 ambcol = amb * (1.0-col.w) * col.rgb;
+	vec3 scol = col.w * col.rgb;
 
-	if (discr < 0)
+	if(col.w > 0.0) //If its not a light
 	{
-		return FLT_MAX;
+		l = spheres[0].xyz - pt;
+		dist = length(l);
+		l = normalize(l);
+		lcol = colors[0].rgb;
+		diff = clamp(dot(n,l),0.0,1.0);
+		color += (ambcol * lcol + lcol * diff * scol) / (1.0+dist*dist);
+		if(inShadow(pt,l,dist))
+			color *= 0.7;
+
+		l = spheres[1].xyz - pt;
+		dist = length(l);
+		l = normalize(l);
+		vec3 lcol = colors[1].rgb;
+		diff = clamp(dot(n,l),0.0,1.0);
+		color += (ambcol * lcol + lcol * diff * scol) / (1.0+dist*dist);
+
+		if(inShadow(pt,l,dist))
+			color *= 0.7;
 	}
 	else
-	{
-		t1 = (-k2 + sqrt(discr)) / (2 * k1);
-		t2 = (-k2 - sqrt(discr)) / (2 * k1);
-	}
-	float t = FLT_MAX;
-	if (t1 < t && t1 >= tMin)
-	{
-		t = t1;
-	}
-	if (t2 < t && t2 >= tMin)
-	{
-		t = t2;
-	}
-	return t;
+		color = col.rgb;
+
+	return color;
 }
 
-vec4 ReflectRay(vec4 r, vec4 normal) {
-	return normalize(2 * normal * dot(r, normal) - r);
-}
-
-void ClosestIntersection(vec4 o, vec4 d, float tMin, float tMax, out float t, out int sphereIndex) {
-	float closest = FLT_MAX;
-	int sphere_index = -1;
-
-	for (int i = 0; i < scene.sphere_count; i++)
-	{
-		float intersect = IntersectRaySphere(o, d, tMin, i);
-
-		if (intersect < tMax && intersect < closest)
-		{
-			closest = intersect;
-			sphere_index = i;
-		}
-	}
-
-	t = closest;
-	sphereIndex = sphere_index;
-}
-
-float ComputeLighting(vec4 point, vec4 normal, vec4 view, int specular)
+float getFresnel(vec3 n,vec3 rd,float r0)
 {
-	float sum = 0.0;
-	vec4 L;
-
-	for (int i = 0; i < scene.light_count; i++)
-	{
-		if (lights[i].type == LIGHT_AMBIENT) {
-			sum += lights[i].intensity;
-		}
-		else {
-			float tMax = 0.0;
-			if (lights[i].type == LIGHT_POINT) {
-				L = lights[i].position - point;
-				tMax = 1.0;
-			}
-			else if (lights[i].type == LIGHT_DIRECT) {
-				L = lights[i].direction;
-				tMax = FLT_MAX;
-			}
-
-			#ifdef SHADOW_ENABLED
-			int sphereIndex;
-			float t;
-			ClosestIntersection(point, L, T_MIN, tMax, t, sphereIndex);
-			if (sphereIndex != -1) continue;
-			#endif
-			
-			float nDotL = dot(normal, L);
-			if (nDotL > 0) {
-				sum += lights[i].intensity * nDotL / (length(normal) * length(L));
-			}
-			if (specular <= 0) continue;
-			
-			vec4 r = ReflectRay(L, normal);
-			float rDotV = dot (r, view);
-			if (rDotV > 0)
-			{
-				sum += lights[i].intensity * pow(rDotV / (length(r) * length(view)), specular);
-			}
-		}
-	}
-	return sum;
+    float ndotv = clamp(dot(n, -rd), 0.0, 1.0);
+	return r0 + (1.0 - r0) * pow(1.0 - ndotv, 5.0);
 }
 
-void swap(inout float a, inout float b)
+vec3 getReflection(vec3 ro,vec3 rd)
 {
-	float tmp = a;
-	a = b;
-	b = tmp;
-}
-
-bool refract2(in vec4 v, in vec4 n, in float ni_over_nt, out vec4 refracted) {
-  vec4 uv = normalize(v);
-  float dt = dot(uv, n);
-  float discriminant = 1.0 - ni_over_nt * ni_over_nt * (1 - dt * dt);
-  if (discriminant > 0) {
-    refracted = ni_over_nt * (uv - n * dt) - n * sqrt(discriminant);
-    return true;
-  } else {
-    return false;
-  }
-}
-
-vec4 refract(vec4 I, vec4 N, float ior) 
-{ 
-    float cosi = clamp(-1, 1, dot(I, N)); 
-    float etai = 1, etat = ior; 
-    vec4 n = N; 
-    if (cosi < 0) { cosi = -cosi; } 
-	else 
-	{ 
-		float tmp = etai;
-		etai = etat;
-		etat = tmp;
-		//swap(etai, etat);
-		n= -N; 
-	} 
-    float eta = etai / etat; 
-    float k = 1 - eta * eta * (1 - cosi * cosi); 
-    return k < 0.0 ? vec4(0) : eta * I + (eta * cosi - sqrt(k)) * n; 
-}
-
-void fresnel(vec4 I, vec4 N, float ior, out float kr) 
-{ 
-    float cosi = clamp(-1, 1, dot(I, N)); 
-    float etai = 1, etat = ior; 
-    if (cosi > 0) 
-	{ 
-		float tmp = etai;
-		etai = etat;
-		etat = tmp;
-		//swap(etai, etat); 
-	} 
-    // Compute sini using Snell's law
-    float sint = etai / etat * sqrt(max(0.0, 1 - cosi * cosi)); 
-    // Total internal reflection
-    if (sint >= 1) { 
-        kr = 1; 
-    } 
-    else { 
-        float cost = sqrt(max(0.0, 1 - sint * sint)); 
-        cosi = abs(cosi); 
-        float Rs = ((etat * cosi) - (etai * cost)) / ((etat * cosi) + (etai * cost)); 
-        float Rp = ((etai * cosi) - (etat * cost)) / ((etai * cosi) + (etat * cost)); 
-        kr = (Rs * Rs + Rp * Rp) / 2; 
-    }
-} 
-
-bool TraceRayOneHit(vec4 o, vec4 d, float tMin, float tMax, out vec4 color) 
-{
-	float closest;
-	int sphere_index;
-	ClosestIntersection(o, d, tMin, tMax, closest, sphere_index);
-	if (sphere_index == -1)
+	vec3 color = vec3(0);
+	vec4 ob,col;
+    vec2 mat;
+	float tm = calcInter(ro,rd,ob,col,mat);
+	if(tm < maxDist)
 	{
-		color = scene.bg_color;
-		return true;
+		vec3 pt = ro + rd*tm;
+		vec3 n = normalize(pt - ob.xyz);
+		color = calcShade(pt,ob,col,mat,n);
 	}
-	if (spheres[sphere_index].refract > 0) return false;
-
-	vec4 p = o + (d * closest);
-	vec4 normal = normalize(p - spheres[sphere_index].center);
-	vec4 view = -d;
-	if (dot(normal, d) > 0)
-	{
-		normal = -normal;
-	}
-
-	color = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
-	return true;
+	return color;
 }
 
-vec4 TraceRay(vec4 o, vec4 d, float tMin, float tMax)
+void rotObjects()
 {
-	if (scene.reflect_depth == 0) return vec4(0,0,0,0);
+	spheres[0].x += sin(iTime) * 0.4;
+    spheres[0].z += cos(iTime) * 0.4;
+    
+    spheres[1].x += sin(iTime) * -0.3;
+    spheres[1].z += cos(iTime) * -0.3;
+}
 
-	float closest;
-	int sphere_index;
 
-	vec4 colors[MAX_RECURSION_DEPTH];
-    float reflects[MAX_RECURSION_DEPTH];
-	bool isRefract[MAX_RECURSION_DEPTH];
-	vec4 refracts[MAX_RECURSION_DEPTH];
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    init();
+	float fresnel,tm;
+	vec4 ob,col;
+    vec2 mat;
+	vec3 pt,refCol,n,refl;
 
-	int recursionCount = 0;
-
-	for (int i = 0; i < scene.reflect_depth; i++)
-	{
-		ClosestIntersection(o, d, tMin, tMax, closest, sphere_index);
-		if (sphere_index == -1)
-		{
-			colors[recursionCount] = scene.bg_color;
-			reflects[recursionCount] = 0;
-			++recursionCount;
-			break;
-		}
-		vec4 p = o + (d * closest);
-		vec4 normal = normalize(p - spheres[sphere_index].center);
-
-		vec4 view = -d;
-		//vec4 offset = normal * REFLECT_BIAS;
-
-		float refraction = spheres[sphere_index].refract;
-		if (refraction > 0)
-		{
-			--i;
-
-			bool outside = dot (d, normal) < 0; 
-			vec4 bias = REFLECT_BIAS * normal;
-
-			vec4 reflectionDirection = ReflectRay(view, normal); 
-			vec4 reflectionRayOrig = outside ? p + bias : p - bias; 
-			// vec4 reflectionColor = castRay(reflectionRayOrig, reflectionDirection, objects, lights, options, depth + 1); 
-
-			//reflects[recursionCount] = 0;
-			vec4 refractionColor = vec4(0);
-			// compute fresnel
-			float kr; 
-			fresnel(d, normal, refraction, kr);
-			// compute refraction if it is not a case of total internal reflection
-			if (kr < 1) { 
-				vec4 refractionDirection = normalize(refract(d, normal, refraction)); 
-				vec4 refractionRayOrig = outside ? p - bias : p + bias; 
-				//refractionColor = castRay(refractionRayOrig, refractionDirection, objects, lights, options, depth + 1); 
-				o = refractionRayOrig;
-				d = refractionDirection;
-				//break;
-			}
+	vec3 mask = vec3(1.0);
+	vec3 color = vec3(0.0);
+	vec3 ro = cam.position;
+	vec3 rd = getRayDir(fragCoord);
+    
+    rotObjects();
 	
-			// // mix the two
-			// hitColor += reflectionColor * kr + refractionColor * (1 - kr); 
-		}
-		else 
-		{
-			//good for surfaces, bad for box, sphere
-			if (dot(normal, d) > 0)
-			{
-				normal = -normal;
-			}
-
-			colors[recursionCount] = spheres[sphere_index].color * ComputeLighting(p + normal * SHADOW_BIAS, normal, view, spheres[sphere_index].specular);
-			reflects[recursionCount] = spheres[sphere_index].reflect;
-
-			++recursionCount;
-			if (spheres[sphere_index].reflect <= 0.0)
-				break;
-
-			if (i < scene.reflect_depth - 1) {
-				//setup for next iteration
-				o = p + normal * REFLECT_BIAS;
-				d = ReflectRay(view, normal);
-			}
-		}
-	}
-
-	if (recursionCount <= 1)
-	 	return colors[0];
-
-	vec4 totalColor = colors[recursionCount - 1];
-
-	for(int i = recursionCount - 2; i >= 0; i--)
+	for(int i = 0; i < iterations; i++)
 	{
-		float reflect = reflects[i];
-		vec4 prevColor = colors[i];
-		totalColor = prevColor * (1 - reflect) + totalColor * reflect;
+		tm = calcInter(ro,rd,ob,col,mat);
+		if(tm < maxDist)
+		{
+			pt = ro + rd*tm;
+			n = normalize(pt - ob.xyz);
+			fresnel = getFresnel(n,rd,mat.x);
+			mask *= fresnel;
+            
+			if(mat.y > 0.0) // Refractive
+			{
+				ro = pt - n*eps;
+				refl = reflect(rd,n);
+				refCol = getReflection(ro, refl);
+				color += refCol * mask;
+				mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
+				rd = refract(rd, n, mat.y);
+			}
+			else if(mat.x > 0.0) // Reflective
+			{
+				color += calcShade(pt,ob,col,mat,n) * (1.0 - fresnel) * mask / fresnel;
+				ro = pt + n*eps;
+				rd = reflect(rd, n);
+			}
+			else // Diffuse
+            {
+				color += calcShade(pt,ob,col,mat,n) * mask/fresnel;
+                break;
+            }
+		}
 	}
-
-	return totalColor;
+	fragColor = vec4(color,1.0);
 }
-
-void main () 
-{
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-	if (pixel_coords.x > scene.canvas_width || pixel_coords.y > scene.canvas_height) return;
-
-	vec4 d = CanvasToViewport(pixel_coords);
-	vec4 color = TraceRay(scene.camera_pos, d, T_MIN, FLT_MAX);
-	#ifndef DBG
-    imageStore (img_output, pixel_coords,color);
-	#endif
-}                                                             
