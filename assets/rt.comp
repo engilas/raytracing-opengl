@@ -71,13 +71,13 @@ const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
 const float eps = 1e-3;
 
-struct Camera
-{
-	vec3 up, right, forward;
-	vec3 position;
-};
+// struct Camera
+// {
+// 	vec3 up, right, forward;
+// 	vec3 position;
+// };
 
-Camera cam;
+//Camera cam;
 vec4 spheres[10];
 vec4 colors[10];
 vec2 materials[10];
@@ -120,10 +120,10 @@ void init()
     materials[8] = vec2 (0.1, 0.0);				
     materials[9] = vec2 (0.1, 0.0);	
 
-    cam.up       = vec3(0.0, 1.0, 0.0);
-    cam.right    = vec3(1.0, 0.0, 0.0);
-    cam.forward  = vec3(0.0, 0.0,-1.0);
-    cam.position = vec3(0.0, 0.0,-0.2);
+    // cam.up       = vec3(0.0, 1.0, 0.0);
+    // cam.right    = vec3(1.0, 0.0, 0.0);
+    // cam.forward  = vec3(0.0, 0.0,-1.0);
+    // cam.position = vec3(0.0, 0.0,-0.2);
 }
 
 // vec3 getRayDir(vec2 fragCoord)
@@ -133,23 +133,47 @@ void init()
 //   return normalize(uv.x * cam.right + uv.y * cam.up + cam.forward);
 // }
 
+vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
+	vec4 result;
+
+	result.w = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
+	result.x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
+	result.y = q1.w * q2.y + q1.y * q2.w + q1.z * q2.x - q1.x * q2.z;
+	result.z = q1.w * q2.z + q1.z * q2.w + q1.x * q2.y - q1.y * q2.x;
+
+	return result;
+}
+
+vec3 Rotate(vec4 q, vec3 v)
+{
+	vec4 qv = vec4(v, 0);
+
+	vec4 mult = multiplyQuaternion(q, qv);
+	float scale = 1 / (q.w * q.w + dot(q, q));
+	vec4 inverse = - scale * q;
+	inverse.w = scale * q.w;
+	vec3 result = vec3(multiplyQuaternion(mult, inverse));
+
+	return result;
+}
+
 vec3 getRayDir(ivec2 pixel_coords)
 {
-	vec2 uv = (pixel_coords.xy / vec2(scene.canvas_width, scene.canvas_height)) * 2.0 - 1.0;
+	//vec2 uv = (pixel_coords.xy / vec2(scene.canvas_width, scene.canvas_height)) * 2.0 - 1.0;
 
 
-	//int x = int (pixel_coords.x - scene.canvas_width / 2.0);
-	//int y = int (pixel_coords.y - scene.canvas_height / 2.0);
+	int x = int (pixel_coords.x - scene.canvas_width / 2.0);
+	int y = int (pixel_coords.y - scene.canvas_height / 2.0);
 	//vec2 uv = vec2(x,y); //* (scene.canvas_width / scene.canvas_height);
-	uv.x *= scene.canvas_width / scene.canvas_height;
-	return normalize(uv.x * cam.right + uv.y * cam.up + cam.forward);
+	//uv.x *= scene.canvas_width / scene.canvas_height;
+	//return normalize(uv.x * cam.right + uv.y * cam.up + cam.forward);
 
-	// vec3 result = vec3(
-	// 	x * scene.viewport_width / scene.canvas_width,
-	// 	y * scene.viewport_height / scene.canvas_height,
-	// 	scene.viewport_dist);
+	vec3 result = vec3(
+		x * scene.viewport_width / scene.canvas_width,
+	 	y * scene.viewport_height / scene.canvas_height,
+	 	scene.viewport_dist);
 	// return result;
-	//return Rotate(scene.quat_camera_rotation, result);
+	return normalize(Rotate(scene.quat_camera_rotation, result));
 }
 
 
@@ -286,7 +310,7 @@ void main()
 
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
-	vec3 ro = cam.position;
+	vec3 ro = vec3(scene.camera_pos);
 	vec3 rd = getRayDir(pixel_coords);
     
     rotObjects();
