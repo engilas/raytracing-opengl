@@ -78,9 +78,11 @@ const float eps = 1e-3;
 // };
 
 //Camera cam;
-vec4 spheres[10];
-vec4 colors[10];
-vec2 materials[10];
+#define sp_size 11
+
+vec4 spheres[sp_size];
+vec4 colors[sp_size];
+vec2 materials[sp_size];
 
 void init()
 {
@@ -95,6 +97,7 @@ void init()
     spheres[7] = vec4(      0,  1001.0,       0, 1000.0); 
     spheres[8] = vec4(      0, -1001.0,       0, 1000.0);
     spheres[9] = vec4(      0,       0, -1002.0, 1000.0);
+	spheres[10] = vec4(      0,    -0.1,    -1,    0.15);
 
     //R G B Diffuse
     colors[0] = vec4(1.0, 0.8, 0.0,-1.0);
@@ -107,18 +110,20 @@ void init()
     colors[7] = vec4(1.0, 1.0, 1.0, 0.7);
     colors[8] = vec4(1.0, 1.0, 1.0, 0.7);
     colors[9] = vec4(1.0, 1.0, 1.0, 0.7);
+	colors[10] = vec4(1.0, 0.0, 0.0, 0.5);
 
     //Reflection Coeff, Refraction index
     materials[0] = vec2 (0.0, 0.0);
     materials[1] = vec2 (0.0, 0.0);				
     materials[2] = vec2 (1.0, 0.0);	
     materials[3] = vec2 (0.1, 0.8);	
-    materials[4] = vec2 (0.1, 0.8);	
+    materials[4] = vec2 (0.1, 0.8);
     materials[5] = vec2 (0.0, 0.0);				
     materials[6] = vec2 (0.0, 0.0);				
     materials[7] = vec2 (0.1, 0.0);				
     materials[8] = vec2 (0.1, 0.0);				
-    materials[9] = vec2 (0.1, 0.0);	
+    materials[9] = vec2 (0.1, 0.0);
+	materials[10] = vec2 (0.2, 0.0);	
 
     // cam.up       = vec3(0.0, 1.0, 0.0);
     // cam.right    = vec3(1.0, 0.0, 0.0);
@@ -210,6 +215,7 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec4 col,out vec2 mat)
 	if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = colors[7]; tm = t; mat = materials[7]; }
 	if(intersectSphere(ro,rd,spheres[8],tm,t)) { ob = spheres[8]; col = colors[8]; tm = t; mat = materials[8]; }
     if(intersectSphere(ro,rd,spheres[9],tm,t)) { ob = spheres[9]; col = colors[9]; tm = t; mat = materials[9]; }
+	if(intersectSphere(ro,rd,spheres[10],tm,t)) { ob = spheres[9]; col = colors[10]; tm = t; mat = materials[10]; }
 
 	return tm;
 }
@@ -226,6 +232,7 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	if(intersectSphere(ro,rd,spheres[6],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[7],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[8],d,t)){ ret = true; }
+	if(intersectSphere(ro,rd,spheres[10],d,t)){ ret = true; }
 
 	return ret;
 }
