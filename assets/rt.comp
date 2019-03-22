@@ -69,7 +69,7 @@ layout( std430, binding=3 ) readonly buffer lights_buf
 const int iterations = 5;
 const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
-const float eps = 1e-3;
+const float eps = 0.1;
 
 // struct Camera
 // {
@@ -87,8 +87,8 @@ vec2 materials[sp_size];
 void init()
 {
     // X Y Z Radius
-    spheres[0] = vec4(      0,       0,    -1.5,    0.1);
-    spheres[1] = vec4(      0,    0.25,    -1.5,    0.1);
+    spheres[0] = vec4(      1,       0,    -1.5,    0.1);
+    spheres[1] = vec4(      -1,    0.25,    -1.5,    0.1);
     spheres[2] = vec4(      0,    -0.7,    -1.5,    0.3);
     spheres[3] = vec4(      0,    -0.1,    -1.5,    0.3);
     spheres[4] = vec4(      0,    -0.1,    -1.5,    0.15);
@@ -194,8 +194,10 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 	t = b*b-c;
     if( t > 0.0 )
     {
-        t = -b-sqrt(t);
-        r = (t > 0.0) && (t < tm);
+		float sqrt_ = sqrt(t);
+		t = -b - sqrt_;
+		if (t < eps) t = - b + sqrt_;
+		r = (t > 0.0) && (t < tm);
     }
     return r;
 }
@@ -209,13 +211,13 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec4 col,out vec2 mat)
 	if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = colors[1]; tm = t; mat = materials[1]; }
 	if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = colors[2]; tm = t; mat = materials[2]; }
 	if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = colors[3]; tm = t; mat = materials[3]; }
-	if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = colors[4]; tm = t; mat = materials[4]; }
+	//if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = colors[4]; tm = t; mat = materials[4]; }
 	if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = colors[5]; tm = t; mat = materials[5]; }
 	if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = colors[6]; tm = t; mat = materials[6]; }
 	if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = colors[7]; tm = t; mat = materials[7]; }
 	if(intersectSphere(ro,rd,spheres[8],tm,t)) { ob = spheres[8]; col = colors[8]; tm = t; mat = materials[8]; }
     if(intersectSphere(ro,rd,spheres[9],tm,t)) { ob = spheres[9]; col = colors[9]; tm = t; mat = materials[9]; }
-	if(intersectSphere(ro,rd,spheres[10],tm,t)) { ob = spheres[9]; col = colors[10]; tm = t; mat = materials[10]; }
+	//if(intersectSphere(ro,rd,spheres[10],tm,t)) { ob = spheres[9]; col = colors[10]; tm = t; mat = materials[10]; }
 
 	return tm;
 }
@@ -227,12 +229,12 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 
 	if(intersectSphere(ro,rd,spheres[2],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[3],d,t)){ ret = true; }
-	if(intersectSphere(ro,rd,spheres[4],d,t)){ ret = true; }
+	//if(intersectSphere(ro,rd,spheres[4],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[5],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[6],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[7],d,t)){ ret = true; }
 	if(intersectSphere(ro,rd,spheres[8],d,t)){ ret = true; }
-	if(intersectSphere(ro,rd,spheres[10],d,t)){ ret = true; }
+	//if(intersectSphere(ro,rd,spheres[10],d,t)){ ret = true; }
 
 	return ret;
 }
@@ -320,7 +322,7 @@ void main()
 	vec3 ro = vec3(scene.camera_pos);
 	vec3 rd = getRayDir(pixel_coords);
     
-    rotObjects();
+    //rotObjects();
 	
 	for(int i = 0; i < iterations; i++)
 	{
@@ -334,22 +336,33 @@ void main()
             
 			if(mat.y > 0.0) // Refractive
 			{
-				ro = pt - n*eps;
-				refl = reflect(rd,n);
-				refCol = getReflection(ro, refl);
-				color += refCol * mask;
-				mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
-				rd = refract(rd, n, mat.y);
+				bool outside = dot(rd, n) < 0; 
+				ro = outside ? pt - n * eps : pt + n * eps;
+				if (outside)
+				{
+					refl = reflect(rd, n);
+					refCol = getReflection(ro, refl);
+					color += refCol * mask;
+					mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
+				}
+				rd = refract(rd, outside ? n : -n, mat.y);
+
+				// ro = pt - n*eps;
+				// refl = reflect(rd,n);
+				// refCol = getReflection(ro, refl);
+				// color += refCol * mask;
+				// mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
+				// rd = refract(rd, n, mat.y);
 			}
 			else if(mat.x > 0.0) // Reflective
 			{
-				color += calcShade(pt,ob,col,mat,n) * (1.0 - fresnel) * mask / fresnel;
 				ro = pt + n*eps;
+				color += calcShade(ro,ob,col,mat,n) * (1.0 - fresnel) * mask / fresnel;
 				rd = reflect(rd, n);
 			}
 			else // Diffuse
             {
-				color += calcShade(pt,ob,col,mat,n) * mask/fresnel;
+				color += calcShade(pt+ n*eps,ob,col,mat,n) * mask/fresnel;
                 break;
             }
 		}
