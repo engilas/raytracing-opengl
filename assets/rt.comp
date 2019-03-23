@@ -13,8 +13,11 @@
 #define LIGHT_POINT 1
 #define LIGHT_DIRECT 2
 
-#define SHADOW_ENABLED
+//#define SHADOW_ENABLED
 //#define DBG
+
+#define DOUBLE_T
+#define CUSTOM_REFRACT
 
 struct rt_sphere {
 	vec4 center;
@@ -69,7 +72,7 @@ layout( std430, binding=3 ) readonly buffer lights_buf
 const int iterations = 5;
 const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
-const float eps = 0.1;
+const float eps = 0.001;
 
 // struct Camera
 // {
@@ -90,7 +93,7 @@ void init()
     spheres[0] = vec4(      1,       0,    -1.5,    0.1);
     spheres[1] = vec4(      -1,    0.25,    -1.5,    0.1);
     spheres[2] = vec4(      0,    -0.7,    -1.5,    0.3);
-    spheres[3] = vec4(      0,    -0.1,    -1.5,    0.3);
+    spheres[3] = vec4(      0,    -0.1,    -0.5,    0.3);
     spheres[4] = vec4(      0,    -0.1,    -1.5,    0.15);
     spheres[5] = vec4( 1001.0,       0,       0, 1000.0); 
     spheres[6] = vec4(-1001.0,       0,       0, 1000.0);
@@ -116,7 +119,7 @@ void init()
     materials[0] = vec2 (0.0, 0.0);
     materials[1] = vec2 (0.0, 0.0);				
     materials[2] = vec2 (1.0, 0.0);	
-    materials[3] = vec2 (0.1, 0.8);	
+    materials[3] = vec2 (0.1, 1.25);	
     materials[4] = vec2 (0.1, 0.8);
     materials[5] = vec2 (0.0, 0.0);				
     materials[6] = vec2 (0.0, 0.0);				
@@ -196,8 +199,10 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
     {
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
+		#ifdef DOUBLE_T
 		if (t < eps) t = - b + sqrt_;
-		r = (t > 0.0) && (t < tm);
+		#endif
+		r = (t > eps) && (t < tm);
     }
     return r;
 }
@@ -306,6 +311,31 @@ void rotObjects()
     spheres[1].z += cos(1) * -0.3;
 }
 
+void swap(inout float a, inout float b)
+{
+	float tmp = a;
+	a = b;
+	b = tmp;
+}
+
+vec3 refract_c(vec3 I, vec3 N, float ior)
+{
+	float cosi = clamp(dot(I, N), -1, 1);
+	float etai = 1, etat = ior;
+	vec3 n = N;
+	if (cosi < 0) { cosi = -cosi; }
+	else { swap(etai, etat); n = -N; }
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	return k < 0.0 ? vec3(0.0) : eta * I + (eta * cosi - sqrt(k)) * n;
+
+	//float k = 1.0 - eta * eta * (1.0 - N.dotProduct(I) * N.dotProduct(I));
+	//if (k < 0.0)
+	//	return vec3(0.0);       // or genDType(0.0)
+	//else
+	//	return  eta * I - (eta * N.dotProduct(I) + sqrt(k)) * N;
+}
+
 
 void main()
 {
@@ -341,11 +371,15 @@ void main()
 				if (outside)
 				{
 					refl = reflect(rd, n);
-					refCol = getReflection(ro, refl);
+					refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
 					color += refCol * mask;
 					mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
 				}
-				rd = refract(rd, outside ? n : -n, mat.y);
+				#ifdef CUSTOM_REFRACT
+				rd = refract_c(rd, n, mat.y);
+				#else
+				rd = refract(rd, n, mat.y);
+				#endif
 
 				// ro = pt - n*eps;
 				// refl = reflect(rd,n);

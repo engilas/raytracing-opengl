@@ -5,8 +5,8 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 
-static int wind_width = 320;
-static int wind_height= 320;
+static int wind_width = 1680;
+static int wind_height = 1050;
 
 
 
