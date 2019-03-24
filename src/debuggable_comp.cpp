@@ -136,16 +136,7 @@ vec4 _vec4(float x, float y, float z, float w)
 
 vec3 reflect(vec3 i, vec3 n)
 {
-    return i - 2.0 * n.dotProduct(i) * n;
-}
-
-vec3 refract(vec3 I, vec3 N, float eta)
-{
-    float k = 1.0 - eta * eta * (1.0 - N.dotProduct(I) * N.dotProduct(I));
-    if (k < 0.0)
-        return vec3(0.0);       // or genDType(0.0)
-    else
-        return  eta * I - (eta * N.dotProduct(I) + sqrt(k)) * N;
+	return i - 2.0 * n.dotProduct(i) * n;
 }
 
 inline
@@ -153,6 +144,26 @@ float clamp(const float &v, const float &lo, const float &hi)
 {
 	return std::max(lo, std::min(hi, v));
 }
+
+vec3 refract(vec3 I, vec3 N, float ior)
+{
+	float cosi = clamp(I.dotProduct(N) , -1, 1);
+	float etai = 1, etat = ior;
+	vec3 n = N;
+	if (cosi < 0) { cosi = -cosi; }
+	else { std::swap(etai, etat); n = -N; }
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	return k < 0 ? 0 : eta * I + (eta * cosi - sqrtf(k)) * n;
+
+	//float k = 1.0 - eta * eta * (1.0 - N.dotProduct(I) * N.dotProduct(I));
+	//if (k < 0.0)
+	//	return vec3(0.0);       // or genDType(0.0)
+	//else
+	//	return  eta * I - (eta * N.dotProduct(I) + sqrt(k)) * N;
+}
+
+
 
 vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
 	vec4 result;
@@ -171,7 +182,7 @@ vec3 Rotate(vec4 q, vec3 v)
 
 	vec4 mult = multiplyQuaternion(q, qv);
 	float scale = 1 / (q.w * q.w + q.dotProduct(q));
-	vec4 inverse = - scale * q;
+	vec4 inverse = -scale * q;
 	inverse.w = scale * q.w;
 	vec3 result = vec3(multiplyQuaternion(mult, inverse));
 
@@ -201,10 +212,10 @@ vec3 getRayDir(vec2 pixel_coords)
 void init()
 {
 	// X Y Z Radius
-	spheres[0] = _vec4(-0.5, 0, -1.5, 0.1);
-	spheres[1] = _vec4(0.5, 0.25, -1.5, 0.1);
+	spheres[0] = _vec4(1.5, 0, -1.5, 0.1);
+	spheres[1] = _vec4(-1, 0.25, -1.5, 0.1);
 	spheres[2] = _vec4(0, -0.7, -1.5, 0.3);
-	spheres[3] = _vec4(0, 0, -1.5, 0.3);
+	spheres[3] = _vec4(0, -0.1, -1.5, 0.3);
 	spheres[4] = _vec4(0, -0.1, -1.5, 0.15);
 	spheres[5] = _vec4(1001.0, 0, 0, 1000.0);
 	spheres[6] = _vec4(-1001.0, 0, 0, 1000.0);
@@ -230,8 +241,8 @@ void init()
 	materials[0] = _vec2(0.0, 0.0);
 	materials[1] = _vec2(0.0, 0.0);
 	materials[2] = _vec2(1.0, 0.0);
-	materials[3] = _vec2(0.5, 0.8);
-	materials[4] = _vec2(0.5, 0.8);
+	materials[3] = _vec2(0.5, 1.25);
+	materials[4] = _vec2(0.5, 1.25);
 	materials[5] = _vec2(0.0, 0.0);
 	materials[6] = _vec2(0.0, 0.0);
 	materials[7] = _vec2(0.1, 0.0);
@@ -256,8 +267,8 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, float &t)
 	{
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
-		if (t < 0) t += 2 * sqrt_;
-		r = (t > 0.0) && (t < tm);
+		if (t < eps) t = -b + sqrt_;
+		r = (t > eps) && (t < tm);
 	}
 	return r;
 }
@@ -267,25 +278,43 @@ float calcInter(vec3 ro, vec3 rd, vec4 &ob, vec4 &col, vec2 &mat)
 	float tm = maxDist;
 	float t;
 
-	if (intersectSphere(ro, rd, spheres[0], tm, t)) 
-        { ob = spheres[0]; col = colors[0]; tm = t; mat = materials[0]; }
+	if (intersectSphere(ro, rd, spheres[0], tm, t))
+	{
+		ob = spheres[0]; col = colors[0]; tm = t; mat = materials[0];
+	}
 	if (intersectSphere(ro, rd, spheres[1], tm, t))
-        { ob = spheres[1]; col = colors[1]; tm = t; mat = materials[1]; }
-	if (intersectSphere(ro, rd, spheres[2], tm, t)) 
-        { ob = spheres[2]; col = colors[2]; tm = t; mat = materials[2]; }
-	if (intersectSphere(ro, rd, spheres[3], tm, t)) 
-        { ob = spheres[3]; col = colors[3]; tm = t; mat = materials[3]; }
+	{
+		ob = spheres[1]; col = colors[1]; tm = t; mat = materials[1];
+	}
+	if (intersectSphere(ro, rd, spheres[2], tm, t))
+	{
+		ob = spheres[2]; col = colors[2]; tm = t; mat = materials[2];
+	}
+	if (intersectSphere(ro, rd, spheres[3], tm, t))
+	{
+		ob = spheres[3]; col = colors[3]; tm = t; mat = materials[3];
+	}
 	//if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = colors[4]; tm = t; mat = materials[4]; }
-	if (intersectSphere(ro, rd, spheres[5], tm, t)) 
-        { ob = spheres[5]; col = colors[5]; tm = t; mat = materials[5]; }
-	if (intersectSphere(ro, rd, spheres[6], tm, t)) 
-        { ob = spheres[6]; col = colors[6]; tm = t; mat = materials[6]; }
-	if (intersectSphere(ro, rd, spheres[7], tm, t)) 
-        { ob = spheres[7]; col = colors[7]; tm = t; mat = materials[7]; }
-	if (intersectSphere(ro, rd, spheres[8], tm, t)) 
-        { ob = spheres[8]; col = colors[8]; tm = t; mat = materials[8]; }
-	if (intersectSphere(ro, rd, spheres[9], tm, t)) 
-        { ob = spheres[9]; col = colors[9]; tm = t; mat = materials[9]; }
+	if (intersectSphere(ro, rd, spheres[5], tm, t))
+	{
+		ob = spheres[5]; col = colors[5]; tm = t; mat = materials[5];
+	}
+	if (intersectSphere(ro, rd, spheres[6], tm, t))
+	{
+		ob = spheres[6]; col = colors[6]; tm = t; mat = materials[6];
+	}
+	if (intersectSphere(ro, rd, spheres[7], tm, t))
+	{
+		ob = spheres[7]; col = colors[7]; tm = t; mat = materials[7];
+	}
+	if (intersectSphere(ro, rd, spheres[8], tm, t))
+	{
+		ob = spheres[8]; col = colors[8]; tm = t; mat = materials[8];
+	}
+	if (intersectSphere(ro, rd, spheres[9], tm, t))
+	{
+		ob = spheres[9]; col = colors[9]; tm = t; mat = materials[9];
+	}
 	//if (intersectSphere(ro, rd, spheres[10], tm, t)) { ob = spheres[10]; col = colors[10]; tm = t; mat = materials[10]; }
 
 	return tm;
@@ -296,19 +325,35 @@ bool inShadow(vec3 ro, vec3 rd, float d)
 	float t;
 	bool ret = false;
 
-	if (intersectSphere(ro, rd, spheres[2], d, t)) 
-        { ret = true; }
-	if (intersectSphere(ro, rd, spheres[3], d, t)) 
-        { ret = true; }
+	if (intersectSphere(ro, rd, spheres[2], d, t))
+	{
+		ret = true;
+	}
+	if (intersectSphere(ro, rd, spheres[3], d, t))
+	{
+		ret = true;
+	}
 	//if(intersectSphere(ro,rd,spheres[4],d,t)){ ret = true; }
-	if (intersectSphere(ro, rd, spheres[5], d, t)) 
-        { ret = true; }
-	if (intersectSphere(ro, rd, spheres[6], d, t)) 
-        { ret = true; }
-	if (intersectSphere(ro, rd, spheres[7], d, t)) 
-        { ret = true; }
-	if (intersectSphere(ro, rd, spheres[8], d, t)) 
-        { ret = true; }
+	if (intersectSphere(ro, rd, spheres[5], d, t))
+	{
+		ret = true;
+	}
+	if (intersectSphere(ro, rd, spheres[6], d, t))
+	{
+		ret = true;
+	}
+	if (intersectSphere(ro, rd, spheres[7], d, t))
+	{
+		ret = true;
+	}
+	if (intersectSphere(ro, rd, spheres[8], d, t))
+	{
+		ret = true;
+	}
+	if (intersectSphere(ro, rd, spheres[9], d, t))
+	{
+		ret = true;
+	}
 	//if (intersectSphere(ro, rd, spheres[10], d, t)) { ret = true; }
 
 	return ret;
@@ -323,6 +368,7 @@ vec3 calcShade(vec3 pt, vec4 ob, vec4 col, vec2 mat, vec3 n)
 	vec3 color = vec3(0.0);
 	vec3 ambcol = amb * (1.0 - col.w) * col;
 	vec3 scol = col.w * col;
+	vec3 c_color;
 
 	if (col.w > 0.0) //If its not a light
 	{
@@ -330,20 +376,27 @@ vec3 calcShade(vec3 pt, vec4 ob, vec4 col, vec2 mat, vec3 n)
 		dist = l.length();
 		l = l.normalize();
 		lcol = colors[0];
-		diff = clamp(n.dotProduct(l), 0.0, 1.0);
-		color = color + (ambcol * lcol + lcol * diff * scol) * (1 / (1.0 + dist * dist));
-		if (inShadow(pt, l, dist))
-			color *= 0.7;
+		diff = n.dotProduct(l);
+		if (diff >= 0)
+		{
+			c_color = (ambcol * lcol + lcol * diff * scol) * (1 / (1.0 + dist * dist));
+			if (inShadow(pt, l, dist))
+				c_color *= 0.0;
+			color = color + c_color;
+		}
 
 		l = spheres[1] - pt;
 		dist = l.length();
 		l = l.normalize();
 		vec3 lcol = colors[1];
-		diff = clamp(n.dotProduct(l), 0.0, 1.0);
-		color = color + (ambcol * lcol + lcol * diff * scol) * (1 / (1.0 + dist * dist));
-
-		if (inShadow(pt, l, dist))
-			color *= 0.7;
+		diff = n.dotProduct(l);
+		if (diff >= 0)
+		{
+			c_color = (ambcol * lcol + lcol * diff * scol) * (1 / (1.0 + dist * dist));
+			if (inShadow(pt, l, dist))
+				c_color *= 0.0;
+			color = color + c_color;
+		}
 	}
 	else
 		color = col;
@@ -353,7 +406,7 @@ vec3 calcShade(vec3 pt, vec4 ob, vec4 col, vec2 mat, vec3 n)
 
 float getFresnel(vec3 n, vec3 rd, float r0)
 {
-	float ndotv = clamp(n.dotProduct(- rd), 0.0, 1.0);
+	float ndotv = clamp(n.dotProduct(-rd), 0.0, 1.0);
 	return r0 + (1.0 - r0) * pow(1.0 - ndotv, 5.0);
 }
 
@@ -389,7 +442,7 @@ void set_scene(int width, int height, int spheresCount, int lightCount)
 {
 	auto min = width > height ? height : width;
 
-	scene.camera_pos = {};
+	scene.camera_pos = {2.16, 0, -2.3};
 	scene.canvas_height = height;
 	scene.canvas_width = width;
 	scene.viewport_dist = 1;
@@ -400,17 +453,17 @@ void set_scene(int width, int height, int spheresCount, int lightCount)
 
 	scene.sphere_count = spheresCount;
 	scene.light_count = lightCount;
-    const float PI_F = 3.14159265358979f;
-    scene.quat_camera_rotation =_vec4(0,1,0,180 * PI_F / 180.0f);
+	const float PI_F = 3.14159265358979f;
+	scene.quat_camera_rotation = _vec4(0, 1, 0, 180 * PI_F / 180.0f);
 }
 
 void main()
 {
-    //scene.quat_camera_rotation = _vec4(0,0,-1,0);
-    //scene.canvas_width =
-    auto width = 640.0f;
-    auto height = 640.0f;
-    set_scene(width, height, 5, 5);
+	//scene.quat_camera_rotation = _vec4(0,0,-1,0);
+	//scene.canvas_width =
+	auto width = 640.0f;
+	auto height = 640.0f;
+	set_scene(width, height, 5, 5);
 
 	init();
 	float fresnel, tm;
@@ -423,46 +476,46 @@ void main()
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
 	vec3 ro = scene.camera_pos;
-	vec3 rd = vec3(0,0,-1);//getRayDir(pixel_coords);
+	vec3 rd = vec3(-1, 0, 0);//getRayDir(pixel_coords);
 
 	auto iterations = 5;
-	
+
 	for (int i = 0; i < iterations; i++)
 	{
 		tm = calcInter(ro, rd, ob, col, mat);
 
 		if (tm >= maxDist) break;
-		
+
 		pt = ro + rd * tm;
 		n = (pt - ob).normalize();
 		fresnel = getFresnel(n, rd, mat.x);
 		mask *= fresnel;
 
+		bool outside = rd.dotProduct(n) < 0;
 		if (mat.y > 0.0) // Refractive
 		{
-            bool outside = rd.dotProduct(n) < 0; 
-            ro = outside ? pt - n * eps : pt + n * eps;
-            if (outside)
-            {
-                refl = reflect(rd, n);
-			    refCol = getReflection(ro, refl);
-			    color = color + refCol * mask;
-			    mask = col * (1.0 - fresnel) * (mask * (1 / fresnel));
-            }
+			ro = outside ? pt - n * eps : pt + n * eps;
+			if (outside)
+			{
+				refl = reflect(rd, n);
+				refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
+				color = color + refCol * mask;
+				mask = col * (1.0 - fresnel) * (mask * (1 / fresnel));
+			}
 			rd = refract(rd, outside ? n : -n, mat.y);
 		}
 		else if (mat.x > 0.0) // Reflective
 		{
-			color = color + calcShade(pt, ob, col, mat, n) * (1.0 - fresnel) * mask * (1/ fresnel);
-			ro = pt + n * eps;
+			ro = outside ? pt + n * eps : pt - n * eps;
+			color = color + calcShade(ro, ob, col, mat, n) * (1.0 - fresnel) * mask * (1 / fresnel);
 			rd = reflect(rd, n);
 		}
 		else // Diffuse
 		{
-			color = color + calcShade(pt, ob, col, mat, n) * mask * (1 / fresnel);
+			color = color + calcShade(outside ? pt + n * eps : pt - n * eps, ob, col, mat, outside ? n : -n) * mask * (1 / fresnel);
 			break;
 		}
-		
+
 	}
 
 	//imageStore(img_output, pixel_coords, vec4(color, 1.0));
