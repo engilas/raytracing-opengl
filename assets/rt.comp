@@ -92,8 +92,8 @@ vec2 materials[sp_size];
 void init()
 {
     // X Y Z Radius
-    spheres[0] = vec4(      1.5,       0,    -1.5,    0.1);
-    spheres[1] = vec4(      -1,    0.25,    -1.5,    0.1);
+    spheres[0] = vec4(      0.8,       0,    -1.5,    0.1);
+    spheres[1] = vec4(      -0.8,    0.25,    -1.5,    0.1);
     spheres[2] = vec4(      0,    -0.7,    -1.5,    0.3);
     spheres[3] = vec4(      0,    -0.1,    -0.5,    0.3);
     spheres[4] = vec4(      0,    -0.1,    -1.5,    0.15);
@@ -307,7 +307,8 @@ vec3 getReflection(vec3 ro,vec3 rd)
 	{
 		vec3 pt = ro + rd*tm;
 		vec3 n = normalize(pt - ob.xyz);
-		color = calcShade(pt,ob,col,mat,n);
+		bool outside = dot(rd, n) < 0;
+		color = calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,n);
 	}
 	return color;
 }
@@ -384,7 +385,6 @@ void main()
 			bool outside = dot(rd, n) < 0;
 			if(mat.y > 0.0) // Refractive
 			{
-				ro = outside ? pt - n * eps : pt + n * eps;
 				if (outside)
 				{
 					refl = reflect(rd, n);
@@ -392,6 +392,9 @@ void main()
 					color += refCol * mask;
 					mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
 				}
+				// if (fresnel >= 1)
+				// 	break;
+				ro = outside ? pt - n * eps : pt + n * eps;
 				#ifdef CUSTOM_REFRACT
 				rd = refract_c(rd, n, mat.y);
 				#else
