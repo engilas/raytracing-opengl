@@ -19,6 +19,8 @@
 #define DOUBLE_T
 #define CUSTOM_REFRACT
 
+#define AIM_ENABLED
+
 struct rt_sphere {
 	vec4 center;
 	vec4 color;
@@ -200,9 +202,9 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
 		#ifdef DOUBLE_T
-		if (t < eps) t = - b + sqrt_;
+		if (t < 0.0) t = - b + sqrt_;
 		#endif
-		r = (t > eps) && (t < tm);
+		r = (t > 0.0) && (t < tm);
     }
     return r;
 }
@@ -347,13 +349,20 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 
 void main()
 {
+	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+	#ifdef AIM_ENABLED
+	if (pixel_coords == ivec2(scene.canvas_width / 2, scene.canvas_height / 2))
+	{
+		imageStore(img_output, pixel_coords, vec4(1,1,1,0));
+		return;
+	}
+	#endif	
+
     init();
 	float fresnel,tm;
 	vec4 ob,col;
     vec2 mat;
 	vec3 pt,refCol,n,refl;
-
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
 
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);

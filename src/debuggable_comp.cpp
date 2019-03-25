@@ -267,8 +267,8 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, float &t)
 	{
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
-		if (t < eps) t = -b + sqrt_;
-		r = (t > eps) && (t < tm);
+		if (t < 0.0) t = -b + sqrt_;
+		r = (t > 0.0) && (t < tm);
 	}
 	return r;
 }
