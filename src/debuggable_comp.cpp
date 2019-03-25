@@ -420,7 +420,8 @@ vec3 getReflection(vec3 ro, vec3 rd)
 	{
 		vec3 pt = ro + rd * tm;
 		vec3 n = (pt - ob).normalize();
-		color = calcShade(pt, ob, col, mat, n);
+		bool outside = dot(rd, n) < 0;
+		color = calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,n);
 	}
 	return color;
 }
