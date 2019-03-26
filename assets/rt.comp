@@ -351,6 +351,7 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 void main()
 {
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height) return;
 	#ifdef AIM_ENABLED
 	if (pixel_coords == ivec2(scene.canvas_width / 2, scene.canvas_height / 2))
 	{

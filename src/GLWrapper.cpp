@@ -83,19 +83,21 @@ void GLWrapper::stop()
 	glfwTerminate();
 }
 
+inline unsigned divup(unsigned a, unsigned b)
+{
+	return (a + b - 1) / b;
+}
+
 void GLWrapper::draw()
 {
 	glUseProgram(computeHandle);
-	//glUniform1f(glGetUniformLocation(computeHandle, "roll"), (float)frame*0.01f);
-	glDispatchCompute(width / 16.0, height / 16.0, 1);
-	//glDispatchCompute(w, h, 1); // 512^2 threads in blocks of 16^2
+	glDispatchCompute(divup(width, 16), divup(height, 16), 1);
 	checkErrors("Dispatch compute shader");
 
 	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     glUseProgram(renderHandle);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-	//swapBuffers();
 	checkErrors("Draw screen");
 }
 
