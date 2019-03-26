@@ -147,7 +147,7 @@ float clamp(const float &v, const float &lo, const float &hi)
 
 vec3 refract(vec3 I, vec3 N, float ior)
 {
-	float cosi = clamp(I.dotProduct(N) , -1, 1);
+	float cosi = clamp(I.dotProduct(N), -1, 1);
 	float etai = 1, etat = ior;
 	vec3 n = N;
 	if (cosi < 0) { cosi = -cosi; }
@@ -421,7 +421,7 @@ vec3 getReflection(vec3 ro, vec3 rd)
 		vec3 pt = ro + rd * tm;
 		vec3 n = (pt - ob).normalize();
 		bool outside = rd.dotProduct(n) < 0;
-		color = calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,n);
+		color = calcShade(outside ? pt + n * eps : pt - n * eps, ob, col, mat, n);
 	}
 	return color;
 }
@@ -443,7 +443,7 @@ void set_scene(int width, int height, int spheresCount, int lightCount)
 {
 	auto min = width > height ? height : width;
 
-	scene.camera_pos = {-0.85, -0.1, -0.5};
+	scene.camera_pos = { -0.674571633, -0.0960821062, -0.498937666 };
 	scene.canvas_height = height;
 	scene.canvas_width = width;
 	scene.viewport_dist = 1;
@@ -455,7 +455,7 @@ void set_scene(int width, int height, int spheresCount, int lightCount)
 	scene.sphere_count = spheresCount;
 	scene.light_count = lightCount;
 	const float PI_F = 3.14159265358979f;
-	scene.quat_camera_rotation = _vec4(0, 1, 0, 180 * PI_F / 180.0f);
+	scene.quat_camera_rotation = _vec4(-0.0638510138, 0.681917250, 0.0599602908, 0.726165712);
 }
 
 void main()
@@ -477,7 +477,8 @@ void main()
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
 	vec3 ro = scene.camera_pos;
-	vec3 rd = vec3(1, 0, 0);//getRayDir(pixel_coords);
+	//vec3 rd = vec3(1, 0, 0);//getRayDir(pixel_coords);
+	vec3 rd = getRayDir(pixel_coords);
 
 	auto iterations = 5;
 
@@ -490,13 +491,13 @@ void main()
 		pt = ro + rd * tm;
 		n = (pt - ob).normalize();
 
-        bool outside = rd.dotProduct(n) < 0;
-        //if (outside) n = -n;
+		bool outside = rd.dotProduct(n) < 0;
+		//if (outside) n = -n;
 
 		fresnel = getFresnel(n, rd, mat.x);
 		mask *= fresnel;
 
-		
+
 		if (mat.y > 0.0) // Refractive
 		{
 			ro = outside ? pt - n * eps : pt + n * eps;
@@ -517,7 +518,7 @@ void main()
 		}
 		else // Diffuse
 		{
-			color = color + calcShade(outside ? pt + n * eps : pt - n * eps, ob, col, mat, outside ? n : -n) * mask * (1 / fresnel);
+			color = color + calcShade(outside ? pt + n * eps : pt - n * eps, ob, col, mat, outside ? n : -n) * (mask * (1 / fresnel));
 			break;
 		}
 
