@@ -212,10 +212,10 @@ vec3 getRayDir(vec2 pixel_coords)
 void init()
 {
 	// X Y Z Radius
-	spheres[0] = _vec4(1.5, 0, -1.5, 0.1);
-	spheres[1] = _vec4(-1, 0.25, -1.5, 0.1);
+	spheres[0] = _vec4(0.8, 0, -1.5, 0.1);
+	spheres[1] = _vec4(-0.8, 0.25, -1.5, 0.1);
 	spheres[2] = _vec4(0, -0.7, -1.5, 0.3);
-	spheres[3] = _vec4(0, -0.1, -1.5, 0.3);
+	spheres[3] = _vec4(0, -0.1, -0.5, 0.3);
 	spheres[4] = _vec4(0, -0.1, -1.5, 0.15);
 	spheres[5] = _vec4(1001.0, 0, 0, 1000.0);
 	spheres[6] = _vec4(-1001.0, 0, 0, 1000.0);
@@ -375,7 +375,7 @@ vec3 calcShade(vec3 pt, vec4 ob, vec4 col, vec2 mat, vec3 n)
 		l = spheres[0] - pt;
 		dist = l.length();
 		l = l.normalize();
-		lcol = colors[0];
+		lcol = vec3(colors[0]);
 		diff = n.dotProduct(l);
 		if (diff >= 0)
 		{
@@ -388,7 +388,7 @@ vec3 calcShade(vec3 pt, vec4 ob, vec4 col, vec2 mat, vec3 n)
 		l = spheres[1] - pt;
 		dist = l.length();
 		l = l.normalize();
-		vec3 lcol = colors[1];
+		lcol = vec3(colors[1]);
 		diff = n.dotProduct(l);
 		if (diff >= 0)
 		{
@@ -420,7 +420,7 @@ vec3 getReflection(vec3 ro, vec3 rd)
 	{
 		vec3 pt = ro + rd * tm;
 		vec3 n = (pt - ob).normalize();
-		bool outside = dot(rd, n) < 0;
+		bool outside = rd.dotProduct(n) < 0;
 		color = calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,n);
 	}
 	return color;
@@ -443,7 +443,7 @@ void set_scene(int width, int height, int spheresCount, int lightCount)
 {
 	auto min = width > height ? height : width;
 
-	scene.camera_pos = {2.16, 0, -2.3};
+	scene.camera_pos = {-0.85, -0.1, -0.5};
 	scene.canvas_height = height;
 	scene.canvas_width = width;
 	scene.viewport_dist = 1;
@@ -477,7 +477,7 @@ void main()
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
 	vec3 ro = scene.camera_pos;
-	vec3 rd = vec3(-1, 0, 0);//getRayDir(pixel_coords);
+	vec3 rd = vec3(1, 0, 0);//getRayDir(pixel_coords);
 
 	auto iterations = 5;
 
@@ -489,10 +489,14 @@ void main()
 
 		pt = ro + rd * tm;
 		n = (pt - ob).normalize();
+
+        bool outside = rd.dotProduct(n) < 0;
+        //if (outside) n = -n;
+
 		fresnel = getFresnel(n, rd, mat.x);
 		mask *= fresnel;
 
-		bool outside = rd.dotProduct(n) < 0;
+		
 		if (mat.y > 0.0) // Refractive
 		{
 			ro = outside ? pt - n * eps : pt + n * eps;
