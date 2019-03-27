@@ -17,7 +17,7 @@
 //#define DBG
 
 #define DOUBLE_T
-#define CUSTOM_REFRACT
+//#define CUSTOM_REFRACT
 
 #define AIM_ENABLED
 
@@ -297,6 +297,38 @@ float getFresnel(vec3 n,vec3 rd,float r0)
 	return r0 + (1.0 - r0) * pow(1.0 - ndotv, 5.0);
 }
 
+#define REFRACTIVE_INDEX_OUTSIDE 1.00029
+#define REFRACTIVE_INDEX_INSIDE  1.125
+#define OBJECT_REFLECTIVITY 0.1 // How reflective the object is. regardless of fresnel.
+#define DO_FRESNEL 1
+
+float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, float refl)
+{
+    #if DO_FRESNEL
+        // Schlick aproximation
+        float r0 = (n1-n2) / (n1+n2);
+        r0 *= r0;
+        float cosX = -dot(normal, incident);
+        if (n1 > n2)
+        {
+            float n = n1/n2;
+            float sinT2 = n*n*(1.0-cosX*cosX);
+            // Total internal reflection
+            if (sinT2 > 1.0)
+                return 1.0;
+            cosX = sqrt(1.0-sinT2);
+        }
+        float x = 1.0-cosX;
+        float ret = r0+(1.0-r0)*x*x*x*x*x;
+
+        // adjust reflect multiplier for object reflectivity
+        ret = (refl + (1.0-refl) * ret);
+        return ret;
+    #else
+    	return refl;
+    #endif
+}
+
 vec3 getReflection(vec3 ro,vec3 rd)
 {
 	vec3 color = vec3(0);
@@ -380,10 +412,19 @@ void main()
 		{
 			pt = ro + rd*tm;
 			n = normalize(pt - ob.xyz);
-			fresnel = getFresnel(n,rd,mat.x);
+			//fresnel = getFresnel(n,rd,mat.x);
+			//mask *= fresnel;
+			bool outside = dot(rd, n) < 0;
+
+			fresnel = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_OUTSIDE : REFRACTIVE_INDEX_INSIDE,
+											outside ? REFRACTIVE_INDEX_INSIDE : REFRACTIVE_INDEX_OUTSIDE,
+											 rd, n, mat.x);
 			mask *= fresnel;
 
-			bool outside = dot(rd, n) < 0;
+			//float reflectMultiplier = FresnelReflectAmount(REFRACTIVE_INDEX_OUTSIDE, REFRACTIVE_INDEX_INSIDE, rd, n);
+        	//float refractMultiplier = 1.0 - reflectMultiplier;
+
+			
 			if(mat.y > 0.0) // Refractive
 			{
 				if (outside)
@@ -395,11 +436,12 @@ void main()
 				}
 				// if (fresnel >= 1)
 				// 	break;
+				float refractCoeff = outside ? REFRACTIVE_INDEX_OUTSIDE / REFRACTIVE_INDEX_INSIDE : REFRACTIVE_INDEX_INSIDE / REFRACTIVE_INDEX_OUTSIDE;
 				ro = outside ? pt - n * eps : pt + n * eps;
 				#ifdef CUSTOM_REFRACT
 				rd = refract_c(rd, n, mat.y);
 				#else
-				rd = refract(rd, n, mat.y);
+				rd = refract(rd, outside ? n : -n, refractCoeff);
 				#endif
 
 				// ro = pt - n*eps;
