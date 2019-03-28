@@ -446,7 +446,7 @@ void main()
 				{
 					refl = reflect(rd, n);
 					refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
-					color += refCol * reflectMultiplier;
+					color += refCol * reflectMultiplier * mask;
 					mask *= refractMultiplier;
 				}
 				#if TOTAL_INTERNAL_REFLECTION
