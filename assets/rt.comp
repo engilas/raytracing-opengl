@@ -21,7 +21,7 @@
 #define TOTAL_INTERNAL_REFLECTION 1
 #define REFRACTIVE_INDEX_AIR 1.00029
 #define DO_FRESNEL 1
-//#define LIGHT_AMBIENT vec3(0.1)
+#define LIGHT_AMBIENT2 vec3(0.0)
 
 #define AIM_ENABLED 1
 
@@ -251,10 +251,64 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	return ret;
 }
 
+vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPower, bool doShadow)
+{
+	float dist,diff;
+	vec3 lcol,l;
+	vec3 scol = col.w * col.rgb;
+
+	vec3 pixelColor = diffuse * LIGHT_AMBIENT2;
+	if(col.w > 0.0) //If its not a light
+	{
+		for (int i = 0; i < 2; i++)
+		{
+			l = spheres[i].xyz - pt;
+			dist = length(l);
+			l = normalize(l);
+			lcol = colors[i].rgb;
+			diff = dot(n,l);
+			//проверить normal.y - что делает
+			if (doShadow && diff >= 0){
+				if (doShadow && n.y >= 0.9 && inShadow(pt, l, dist))
+        			continue;
+			}
+
+			// diffuse
+			float dp = clamp(dot(n, l), 0.0, 1.0);
+			pixelColor += diffuse * dp * lcol / (1.0+dist*dist);
+
+			// // specular highlight
+			// if (specPower > 0.0)
+			// {
+			// 	vec3 reflection = reflect(-LIGHT_DIRECTIONAL_DIR, normal);
+			// 	dp = clamp(dot(rayDir, reflection), 0.0, 1.0);
+			// 	pixelColor += LIGHT_DIRECTIONAL_COLOR * pow(dp, specPower);    
+			// }
+
+			//pixelColor += ;	
+
+			
+			// dist = length(l);
+			// l = normalize(l);
+			// lcol = colors[0].rgb;
+			// diff = dot(n,l);
+			// if (diff >= 0){
+			// 	c_color = (ambcol * lcol + lcol * diff * scol) / (1.0+dist*dist);
+			// 	if(inShadow(pt,l,dist))
+			// 		c_color *= 0.0;
+			// 	color += c_color;
+			// }
+		}
+	} else return diffuse;
+	return pixelColor;
+}
+
 // vec3 LightPixel (vec3 rayPos, vec3 rayDir, vec3 diffuse, vec3 normal, float specPower, bool doShadow)
 // {   
 //     // ambient
-//     vec3 pixelColor = diffuse * LIGHT_AMBIENT;
+//     vec3 pixelColor = diffuse * LIGHT_AMBIENT2;
+
+	
     
 //     // see if we are in shadow by casting in the light direction and seeing if we hit the object.
 //     // if we do hit the object, return just the ambient lighting shaded color we have already calculated.
@@ -466,13 +520,16 @@ void main()
 			if(mat.x > 0.0) // Reflective
 			{
 				ro = outside ? pt + n * eps : pt - n * eps;
-				color += calcShade(ro,ob,col,mat,outside ? n : -n) * refractMultiplier * mask;
+				//color += calcShade(ro,ob,col,mat,outside ? n : -n) * refractMultiplier * mask;
+				color += LightPixel2(ro, rd, col.rgb, col, outside ? n : -n, 500.0, true)* refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
             {
-				color += calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,outside ? n : -n) * mask;
+				//color += calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,outside ? n : -n) * mask;
+				//(vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPower, bool doShadow)
+				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col.rgb, col, outside ? n : -n, 500.0, true) * mask;
                 break;
             }
 			
