@@ -17,8 +17,8 @@
 #define DBG 0
 
 #define MULTI_INTERSECTION 1
-#define CUSTOM_REFRACT 0
-#define TOTAL_INTERNAL_REFLECTION 0
+#define CUSTOM_REFRACT 1
+#define TOTAL_INTERNAL_REFLECTION 1
 #define REFRACTIVE_INDEX_AIR 1.00029
 #define DO_FRESNEL 1
 //#define LIGHT_AMBIENT vec3(0.1)
@@ -125,7 +125,7 @@ void init()
     materials[0] = vec2 (0.0, 0.0);
     materials[1] = vec2 (0.0, 0.0);				
     materials[2] = vec2 (1.0, 0.0);	
-    materials[3] = vec2 (0.1, 1.25);	
+    materials[3] = vec2 (0.1, 1.125);	
     materials[4] = vec2 (0.1, 1.25);
     materials[5] = vec2 (0.0, 0.0);				
     materials[6] = vec2 (0.0, 0.0);				
@@ -430,6 +430,7 @@ void main()
 			bool outside = dot(rd, n) < 0;
 
 			#if TOTAL_INTERNAL_REFLECTION
+			//float reflIdx = mat.y > 0 ? mat.y : REFRACTIVE_INDEX_AIR;
 			if (mat.y > 0) 
 				reflectMultiplier = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_AIR : mat.y,
 													  	  outside ? mat.y : REFRACTIVE_INDEX_AIR,
