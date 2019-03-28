@@ -393,7 +393,7 @@ void main()
 	#endif	
 
     init();
-	float fresnel,tm;
+	float reflectMultiplier,refractMultiplier,tm;
 	vec4 ob,col;
     vec2 mat;
 	vec3 pt,refCol,n,refl;
@@ -416,53 +416,41 @@ void main()
 			//mask *= fresnel;
 			bool outside = dot(rd, n) < 0;
 
-			fresnel = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_OUTSIDE : REFRACTIVE_INDEX_INSIDE,
+			reflectMultiplier = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_OUTSIDE : REFRACTIVE_INDEX_INSIDE,
 											outside ? REFRACTIVE_INDEX_INSIDE : REFRACTIVE_INDEX_OUTSIDE,
 											 rd, n, mat.x);
-			
+			refractMultiplier = 1 - reflectMultiplier;
 
-			//float reflectMultiplier = FresnelReflectAmount(REFRACTIVE_INDEX_OUTSIDE, REFRACTIVE_INDEX_INSIDE, rd, n);
-        	//float refractMultiplier = 1.0 - reflectMultiplier;
-
-			
-			// if(mat.y > 0.0) // Refractive
-			// {
-			// 	if (outside)
-			// 	{
-			// 		refl = reflect(rd, n);
-			// 		refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
-			// 		color += refCol * fresnel;
-			// 		mask *= fresnel;
-			// 		//mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
-			// 	}
-			// 	// if (fresnel >= 1)
-			// 	// 	break;
-			// 	float refractCoeff = outside ? REFRACTIVE_INDEX_OUTSIDE / REFRACTIVE_INDEX_INSIDE : REFRACTIVE_INDEX_INSIDE / REFRACTIVE_INDEX_OUTSIDE;
-			// 	ro = outside ? pt - n * eps : pt + n * eps;
-			// 	#if CUSTOM_REFRACT
-			// 	rd = refract_c(rd, n, mat.y);
-			// 	#else
-			// 	rd = refract(rd, outside ? n : -n, refractCoeff);
-			// 	#endif
-
-			// 	// ro = pt - n*eps;
-			// 	// refl = reflect(rd,n);
-			// 	// refCol = getReflection(ro, refl);
-			// 	// color += refCol * mask;
-			// 	// mask = col.rgb * (1.0 - fresnel) * (mask / fresnel);
-			// 	// rd = refract(rd, n, mat.y);
-			// }
-			//else 
+			if(mat.y > 0.0) // Refractive
+			{
+				if (outside)
+				{
+					refl = reflect(rd, n);
+					refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
+					color += refCol * reflectMultiplier;
+					mask *= refractMultiplier;
+				}
+				// if (reflectMultiplier >= 1)
+				// 	break;
+				float refractCoeff = outside ? REFRACTIVE_INDEX_OUTSIDE / REFRACTIVE_INDEX_INSIDE : REFRACTIVE_INDEX_INSIDE / REFRACTIVE_INDEX_OUTSIDE;
+				ro = outside ? pt - n * eps : pt + n * eps;
+				#if CUSTOM_REFRACT
+				rd = refract_c(rd, n, mat.y);
+				#else
+				rd = refract(rd, outside ? n : -n, refractCoeff);
+				#endif
+			}
+			else 
 			if(mat.x > 0.0) // Reflective
 			{
-				ro = outside ? pt + n * eps : pt - n * eps;// pt + n*eps;
-				color += calcShade(ro,ob,col,mat,outside ? n : -n) * fresnel * mask;
+				ro = outside ? pt + n * eps : pt - n * eps;
+				color += calcShade(ro,ob,col,mat,outside ? n : -n) * refractMultiplier * mask;
 				rd = reflect(rd, n);
-				//mask *= fresnel;
+				mask *= reflectMultiplier;
 			}
 			else // Diffuse
             {
-				color += calcShade( outside ? pt + n * eps : pt - n * eps,ob,col,mat,outside ? n : -n) * mask;// mask/fresnel;
+				color += calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,outside ? n : -n) * mask;
                 break;
             }
 			
