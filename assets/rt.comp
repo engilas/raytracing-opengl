@@ -18,9 +18,10 @@
 
 #define MULTI_INTERSECTION 1
 #define CUSTOM_REFRACT 0
-#define TOTAL_INTERNAL_REFLECTION 1
+#define TOTAL_INTERNAL_REFLECTION 0
 #define REFRACTIVE_INDEX_AIR 1.00029
 #define DO_FRESNEL 1
+//#define LIGHT_AMBIENT vec3(0.1)
 
 #define AIM_ENABLED 1
 
@@ -250,6 +251,31 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	return ret;
 }
 
+// vec3 LightPixel (vec3 rayPos, vec3 rayDir, vec3 diffuse, vec3 normal, float specPower, bool doShadow)
+// {   
+//     // ambient
+//     vec3 pixelColor = diffuse * LIGHT_AMBIENT;
+    
+//     // see if we are in shadow by casting in the light direction and seeing if we hit the object.
+//     // if we do hit the object, return just the ambient lighting shaded color we have already calculated.
+//     if (doShadow && normal.y >= 0.9 && RayIntersectObject(rayPos, -LIGHT_DIRECTIONAL_DIR).x >= 0.0)
+//         return pixelColor;
+    
+//     // diffuse
+//     float dp = clamp(dot(normal, -LIGHT_DIRECTIONAL_DIR), 0.0, 1.0);
+//     pixelColor += diffuse * dp * LIGHT_DIRECTIONAL_COLOR;
+    
+//     // specular highlight
+//     if (specPower > 0.0)
+//     {
+//     	vec3 reflection = reflect(-LIGHT_DIRECTIONAL_DIR, normal);
+//     	dp = clamp(dot(rayDir, reflection), 0.0, 1.0);
+// 		pixelColor += LIGHT_DIRECTIONAL_COLOR * pow(dp, specPower);    
+//     }
+    
+//     return pixelColor;
+// }
+
 vec3 calcShade(vec3 pt, vec4 ob, vec4 col,vec2 mat,vec3 n)
 {
 
@@ -427,11 +453,11 @@ void main()
 				if (reflectMultiplier >= 1)
 				 	break;
 				#endif
-				float refractCoeff = outside ? REFRACTIVE_INDEX_AIR / mat.y : mat.y / REFRACTIVE_INDEX_AIR;
 				ro = outside ? pt - n * eps : pt + n * eps;
 				#if CUSTOM_REFRACT
 				rd = refract_c(rd, n, mat.y);
 				#else
+				float refractCoeff = outside ? REFRACTIVE_INDEX_AIR / mat.y : mat.y / REFRACTIVE_INDEX_AIR;
 				rd = refract(rd, outside ? n : -n, refractCoeff);
 				#endif
 			}
