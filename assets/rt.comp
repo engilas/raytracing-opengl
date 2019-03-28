@@ -255,9 +255,10 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPo
 {
 	float dist,diff;
 	vec3 lcol,l;
+	vec3 ambcol = amb * (1.0-col.w) * col.rgb;
 	vec3 scol = col.w * col.rgb;
 
-	vec3 pixelColor = diffuse * LIGHT_AMBIENT2;
+	vec3 pixelColor = diffuse * LIGHT_AMBIENT2 * col.w;
 	if(col.w > 0.0) //If its not a light
 	{
 		for (int i = 0; i < 2; i++)
@@ -268,14 +269,17 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPo
 			lcol = colors[i].rgb;
 			diff = dot(n,l);
 			//проверить normal.y - что делает
-			if (doShadow && diff >= 0){
-				if (doShadow && n.y >= 0.9 && inShadow(pt, l, dist))
-        			continue;
+			if (doShadow && diff >= 0 && inShadow(pt, l, dist)) {
+				continue;
 			}
 
 			// diffuse
 			float dp = clamp(dot(n, l), 0.0, 1.0);
-			pixelColor += diffuse * dp * lcol / (1.0+dist*dist);
+			pixelColor += ( 
+				//ambcol * lcol + scol * 
+				dp * lcol 
+				* diffuse
+				 ) / (1.0+dist*dist);
 
 			// // specular highlight
 			// if (specPower > 0.0)
