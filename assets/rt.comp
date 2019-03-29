@@ -21,8 +21,8 @@
 #define TOTAL_INTERNAL_REFLECTION 1
 #define REFRACTIVE_INDEX_AIR 1.00029
 #define DO_FRESNEL 1
-#define LIGHT_AMBIENT2 vec3(0.0)
-
+#define LIGHT_AMBIENT2 vec3(0.00)
+#define OBJECT_ABSORB  vec3(0.0, 5.0, 5.0) // for beers law
 #define AIM_ENABLED 1
 
 struct rt_sphere {
@@ -114,7 +114,7 @@ void init()
     colors[2] = vec4(1.0, 1.0, 1.0, 1.0);
     colors[3] = vec4(1.0, 1.0, 1.0, 1.0);
     colors[4] = vec4(1.0, 0.0, 0.0, 1.0);
-    colors[5] = vec4(0.0, 1.0, 0.0, 0.01);
+    colors[5] = vec4(0.0, 1.0, 0.0, 0.99);
     colors[6] = vec4(1.0, 0.0, 0.0, 0.7);
     colors[7] = vec4(1.0, 1.0, 1.0, 0.7);
     colors[8] = vec4(1.0, 1.0, 1.0, 0.7);
@@ -255,10 +255,10 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPo
 {
 	float dist,diff;
 	vec3 lcol,l;
-	vec3 ambcol = amb * (1.0-col.w) * col.rgb;
-	vec3 scol = col.w * col.rgb;
+	//vec3 ambcol = amb * (1.0-col.w) * col.rgb;
+	//vec3 scol = col.w * col.rgb;
 
-	vec3 pixelColor = vec3(0);// diffuse * LIGHT_AMBIENT2 ;// * col.w;
+	vec3 pixelColor = vec3(0);//diffuse * LIGHT_AMBIENT2;
 	if(col.w > 0.0) //If its not a light
 	{
 		for (int i = 0; i < 2; i++)
@@ -267,19 +267,18 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPo
 			dist = length(l);
 			l = normalize(l);
 			lcol = colors[i].rgb;
-			diff = dot(n,l);
-			//проверить normal.y - что делает
-			if (doShadow && diff >= 0 && inShadow(pt, l, dist)) {
+			// diffuse
+			float dp = clamp(dot(n, l), 0.0, 1.0);
+			if (doShadow && (dp == 0 || inShadow(pt, l, dist))) {
 				continue;
 			}
 
-			// diffuse
-			float dp = clamp(dot(n, l), 0.0, 1.0);
+			
 			pixelColor += ( 
-				ambcol * lcol + scol * 
+				//ambcol * lcol + scol * 
 				dp * lcol 
-				//* diffuse
-				 ) / (1.0+dist*dist);
+				* diffuse * 0.5
+				 ) / (length(n) * dist);
 
 			// specular highlight
 			if (specPower > 0.0)
@@ -475,6 +474,7 @@ void main()
 	vec3 color = vec3(0.0);
 	vec3 ro = vec3(scene.camera_pos);
 	vec3 rd = getRayDir(pixel_coords);
+	float absorbDistance = 0.0;
 	
 	for(int i = 0; i < iterations; i++)
 	{
@@ -503,10 +503,16 @@ void main()
 			{
 				if (outside)
 				{
+					absorbDistance = 0.0;
 					refl = reflect(rd, n);
 					refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
 					color += refCol * reflectMultiplier * mask;
 					mask *= refractMultiplier;
+				}
+				else {
+					absorbDistance += tm;    
+        			vec3 absorb = exp(-OBJECT_ABSORB * absorbDistance);
+					mask *= absorb;
 				}
 				#if TOTAL_INTERNAL_REFLECTION
 				if (reflectMultiplier >= 1)
