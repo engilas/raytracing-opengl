@@ -503,6 +503,8 @@ void main()
 			{
 				if (outside)
 				{
+					//todo: если прозрачный объект будет внутри другого прозр.объекта, такое не прокатит (absorb = 0)
+					//сделать многоуровневый absorbDistance
 					absorbDistance = 0.0;
 					refl = reflect(rd, n);
 					refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
@@ -515,6 +517,7 @@ void main()
 					mask *= absorb;
 				}
 				#if TOTAL_INTERNAL_REFLECTION
+				//todo: не делать break, вместо этого сделать rd = reflect(..)
 				if (reflectMultiplier >= 1)
 				 	break;
 				#endif
