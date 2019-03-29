@@ -3,42 +3,57 @@
 #include "primitives.h"
 
 typedef struct {
-	float4 center;
-	float4 color;
+	vec3 absorb;
+	float diffuse;
 
-	float radius;
 	float reflect;
-	int specular;
 	float refract;
+	int specular;
+
+    float __padding[1];
+} rt_material;
+
+typedef struct {
+    rt_material material; 
+	vec3 pos; float __p1;
+	vec3 color; float __p2;
+
+    vec3 absorb;
+	float radius;
 } rt_sphere;
 
 typedef enum { ambient, point, direct } lightType;
 typedef enum { sphere } primitiveType;
 
 typedef struct {
-	float4 position;
-	float4 direction;
+	vec3 pos;
+	vec3 direction;
+    vec3 color;
 
     lightType type;
 	float intensity;
+    float radius;
 
-    float __padding[2];
+    //float __padding[1];
 } rt_light;
 
 typedef struct {
-	float4 camera_pos;
-    float4 quat_camera_rotation;
-	float4 bg_color;
+    vec4 quat_camera_rotation;
+	vec3 camera_pos; float __p1;
 
+	vec3 bg_color;
 	int canvas_width;
+
 	int canvas_height;
 	float viewport_width;
 	float viewport_height;
-
 	float viewport_dist;
+
 	int reflect_depth;
 	int sphere_count;
 	int light_count;
+
+    float __padding[1];
 } rt_scene;
 
 typedef struct

@@ -14,15 +14,15 @@
 #define LIGHT_DIRECT 2
 
 #define SHADOW_ENABLED 1
-#define DBG 0
+#define DBG 1
 
 #define MULTI_INTERSECTION 1
 #define CUSTOM_REFRACT 1
 #define TOTAL_INTERNAL_REFLECTION 1
 #define REFRACTIVE_INDEX_AIR 1.00029
 #define DO_FRESNEL 1
-#define LIGHT_AMBIENT2 vec3(0.00)
-#define OBJECT_ABSORB  vec3(0.0, 5.0, 5.0) // for beers law
+// #define LIGHT_AMBIENT2 vec3(0.00)
+// #define OBJECT_ABSORB  vec3(0.0, 5.0, 5.0) // for beers law
 #define AIM_ENABLED 1
 
 struct rt_material {
@@ -35,17 +35,13 @@ struct rt_material {
 };
 
 struct rt_sphere {
+	rt_material material;
 	vec3 pos;
 	vec3 color;
 	vec3 absorb;
+	
 
 	float radius;
-	rt_material material;
-	// float diffuse;
-	// float reflect;
-	// float refract;
-
-	// int specular;
 };
 
 struct rt_light {
@@ -59,8 +55,8 @@ struct rt_light {
 };
 
 struct rt_scene {
+	vec4 quat_camera_rotation;
 	vec3 camera_pos;
-    vec4 quat_camera_rotation;
 	vec3 bg_color;
 
 	int canvas_width;
@@ -91,6 +87,32 @@ layout( std430, binding=3 ) readonly buffer lights_buf
 {
     rt_light lights[ ];
 };
+
+void __dbg()
+{
+	#if DBG
+	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+    imageStore (img_output, pixel_coords, vec4(1,0,0,0));
+	#endif
+}
+
+void __dbg(float value)
+{
+	#if DBG
+	value = clamp(value, 0, 1);
+	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+    imageStore (img_output, pixel_coords, vec4(value,value,value,0));
+	#endif
+}
+
+void __dbg(vec3 value)
+{
+	#if DBG
+	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+    imageStore (img_output, pixel_coords, vec4(clamp(value, vec3(0), vec3(1)),0));
+	#endif
+}
+
 const int iterations = 5;
 const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
@@ -129,6 +151,7 @@ vec3 getRayDir(ivec2 pixel_coords)
 		x * scene.viewport_width / scene.canvas_width,
 	 	y * scene.viewport_height / scene.canvas_height,
 	 	scene.viewport_dist);
+	return normalize(result);
 	return normalize(Rotate(scene.quat_camera_rotation, result));
 }
 
@@ -145,23 +168,30 @@ bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out floa
 	t = b*b-c;
     if( t > 0.0 )
     {
+		//__dbg();
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
 		#if MULTI_INTERSECTION
 		if (t < 0.0) t = - b + sqrt_;
 		#endif
 		r = (t > 0.0) && (t < tm);
-    }
+    } 
     return r;
 }
 
 float calcInter(vec3 ro, vec3 rd, out vec3 ob, out vec3 col,out rt_material mat)
 {
+	// if (spheres[1].radius == 2) __dbg();
+	// return 10000;
+
 	float tm = maxDist;
 	float t;
-
+	//if (scene.light_count == 2) __dbg();
 	for (int i = 0; i < scene.sphere_count; i++) {
+		if (spheres[i].radius == 1) __dbg();
+		//__dbg();
 		vec3 pos = spheres[i].pos;
+		//if (spheres[i].material.refract > 0) __dbg();
 		if(intersectSphere(ro,rd, pos, spheres[i].radius,tm,t)) 
 		{ 
 			ob = pos; 
@@ -361,14 +391,22 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 void main()
 {
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height) return;
-	#if AIM_ENABLED
-	if (pixel_coords == ivec2(scene.canvas_width / 2, scene.canvas_height / 2))
-	{
-		imageStore(img_output, pixel_coords, vec4(1,1,1,0));
+	// if (pixel_coords.x > scene.canvas_width) {
+	// 	__dbg();
+	// 	return;
+	// }
+	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height){
+		//__dbg();
 		return;
 	}
-	#endif	
+	// #if AIM_ENABLED
+	// if (pixel_coords == ivec2(scene.canvas_width / 2, scene.canvas_height / 2))
+	// {
+	// 	imageStore(img_output, pixel_coords, vec4(1,1,1,0));
+	// 	return;
+	// }
+	// #endif
+	//imageStore (img_output, pixel_coords, vec4(vec3(1),0)); return;	
 
     //init();
 	float reflectMultiplier,refractMultiplier,tm;
@@ -388,6 +426,7 @@ void main()
 		tm = calcInter(ro,rd,ob,col,mat);
 		if(tm < maxDist)
 		{
+			__dbg();
 			pt = ro + rd*tm;
 			n = normalize(pt - ob.xyz);
 			//fresnel = getFresnel(n,rd,mat.x);
@@ -454,10 +493,15 @@ void main()
                 break;
             }
 			
+		} 
+		else {
+			color += scene.bg_color * mask;
+			break;
 		}
 	}
-	
-	imageStore (img_output, pixel_coords, vec4(color,0));
+	#if DBG == 0
+	imageStore (img_output, pixel_coords, vec4(color,1));
+	#endif
 	//imageStore(img_output,);
 	//fragColor = vec4(color,1.0);
 }

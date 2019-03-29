@@ -41,18 +41,18 @@ private:
 	GLuint lightSsbo = 0;
 
 	void multiplyVector(float v[3], float s);
-	void addVector(float4 & v1, const float v2[3]);
-	void moveCamera(Quaternion<float>& q, const float direction[3], float4 & vector, float speed);
-	void moveCamera(const float direction[3], float4 & vector, float speed);
+	void addVector(vec3 & v1, const float v2[3]);
+	void moveCamera(Quaternion<float>& q, const float direction[3], vec3 & vector, float speed);
+	void moveCamera(const float direction[3], vec3 & vector, float speed);
 	void ProcessRotations(float frameRate);
 	void UpdateScene(float frameRate);
 	void glfw_key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
 	void glfw_mouse_callback(GLFWwindow * window, double xpos, double ypos);
-	rt_sphere create_spheres(float4 center, float4 color, float radius, int specular, float reflect, float refract);
-	rt_light create_light(lightType type, float intensity, float4 position, float4 direction);
+	rt_sphere create_spheres(vec3 center, vec3 color, float radius, int specular, float reflect, float refract, float diffuse);
+	rt_light create_light(lightType type, float intensity, vec3 position, vec3 direction);
 	rt_scene create_scene(int width, int height, int spheresCount, int lightCount);
 	void initBuffers();
 	void updateBuffers() const;
-	float4 getColor(float r, float g, float b);
+	vec3 getColor(float r, float g, float b);
 };
