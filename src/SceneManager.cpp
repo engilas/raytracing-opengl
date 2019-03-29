@@ -198,7 +198,7 @@ rt_sphere SceneManager::create_spheres(vec3 center, vec3 color, float radius, in
 	return sphere;
 }
 
-rt_light SceneManager::create_light(lightType type, float intensity, vec3 position, vec3 direction)
+rt_light SceneManager::create_light(lightType type, float intensity, vec3 color, vec3 position, vec3 direction)
 {
 	rt_light light = {};
 
@@ -206,6 +206,7 @@ rt_light SceneManager::create_light(lightType type, float intensity, vec3 positi
 	light.intensity = intensity;
 	light.pos = position;
 	light.direction = direction;
+	light.color = color;
 
 	return light;
 }
@@ -260,15 +261,18 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 
 void SceneManager::initBuffers()
 {
-	spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
-	spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 2, 500, 0.3f, 0, 0));
-	/*spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f, 0));
-	spheres.push_back(create_spheres({ 0,-5001,3 }, { 1,1,0 }, 5000, 50, 0.2f, 0));
-	spheres.push_back(create_spheres({ 0,0.8,1 }, { 0,0,0 }, 0.5, 500, 0.4f, 1.5));*/
+	spheres.push_back(create_spheres({ 2,0,4 }, { 0,1,0 }, 1, 10, 0.2f, 0, 1));
+	spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 0, 1));
 
-	/*lights.push_back(create_light(ambient, 0.2f, { 0 }, { 0 }));
-	lights.push_back(create_light(point, 0.6f, { 2,1,0 }, { 0 }));
-	lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));*/
+	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
+	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 2, 500, 0.3f, 0, 0));
+	spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f, 0, 1));
+	spheres.push_back(create_spheres({ 0,-5001,3 }, { 1,1,0 }, 5000, 50, 0.0f, 0, 1));
+	spheres.push_back(create_spheres({ 0,0.8,1 }, { 0,0,0 }, 0.5, 500, 0.4f, 1.5, 1));
+
+	//lights.push_back(create_light(ambient, 0.2f, { 0 }, { 0 }));
+	lights.push_back(create_light(point, 0.6f, {1,1,1}, { 2, 1, 0 }, { 0 }));
+	//lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));
 
 	/*spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.2f, 1.7));
 	rotating_primitives.push_back({ &spheres.back(), sphere, 9, 4, 0, 1 });*/

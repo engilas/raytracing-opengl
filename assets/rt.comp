@@ -14,7 +14,7 @@
 #define LIGHT_DIRECT 2
 
 #define SHADOW_ENABLED 1
-#define DBG 1
+#define DBG 0
 
 #define MULTI_INTERSECTION 1
 #define CUSTOM_REFRACT 1
@@ -151,7 +151,6 @@ vec3 getRayDir(ivec2 pixel_coords)
 		x * scene.viewport_width / scene.canvas_width,
 	 	y * scene.viewport_height / scene.canvas_height,
 	 	scene.viewport_dist);
-	return normalize(result);
 	return normalize(Rotate(scene.quat_camera_rotation, result));
 }
 
@@ -222,9 +221,9 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	bool ret = false;
 
 	for (int i = 0; i < scene.sphere_count; i++) {
-		if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) return true;
+		if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) { ret = true ;}
 	}
-
+	return ret;
 	// if(intersectSphere(ro,rd,spheres[2],d,t)){ ret = true; }
 	// if(intersectSphere(ro,rd,spheres[3],d,t)){ ret = true; }
 	// //if(intersectSphere(ro,rd,spheres[4],d,t)){ ret = true; }
@@ -240,23 +239,25 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 
 vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specPower, bool doShadow)
 {
+	diffuse = 0.7;
+
 	float dist,diff;
 	vec3 lcol,l;
 	vec3 ambcol = amb * (1.0-diffuse) * col;
 	vec3 scol = diffuse * col;
 
 	vec3 pixelColor =  vec3(0);//col * LIGHT_AMBIENT2;
-	if(diffuse > 0.0) //If its not a light
+	//if(diffuse > 0.0) //If its not a light
 	{
 		for (int i = 0; i < scene.light_count; i++) {
-			if (lights[i].type == LIGHT_AMBIENT) {
-				pixelColor += lights[i].intensity;
-			} else {
-				if (lights[i].type == LIGHT_POINT) {
+			// if (lights[i].type == LIGHT_AMBIENT) {
+			// 	pixelColor += lights[i].intensity;
+			// } else {
+				//if (lights[i].type == LIGHT_POINT) {
 					l = lights[i].pos - pt;
-				} else {
-					l = lights[i].direction;
-				}
+				// } else {
+				// 	l = lights[i].direction;
+				// }
 				dist = length(l);
 				l = normalize(l);
 				lcol = lights[i].color;
@@ -269,17 +270,17 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 				pixelColor += ( 
 				ambcol * lcol + scol * 
 				dp * lcol 
-				//* diffuse * col.w
+				//* col
 				 ) / (1.0 + dist * dist);
 
 				 // specular highlight
-				if (specPower > 0.0)
-				{
-					vec3 reflection = reflect(l, n);
-					dp = clamp(dot(rd, reflection), 0.0, 1.0);
-					pixelColor += lcol * pow(dp, specPower);    
-				}
-			}
+				// if (specPower > 0.0)
+				// {
+				// 	vec3 reflection = reflect(l, n);
+				// 	dp = clamp(dot(rd, reflection), 0.0, 1.0);
+				// 	pixelColor += lcol * pow(dp, specPower);    
+				// }
+			//}
 		}
 
 		// for (int i = 0; i < 2; i++)
@@ -308,7 +309,7 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 		// 		pixelColor += lcol * pow(dp, specPower);    
 		// 	}
 		// }
-	} else return col;
+	} //else return col;
 	return pixelColor;
 }
 
@@ -390,6 +391,10 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 
 void main()
 {
+	// if (lights[0].pos.x == 3)
+	// 	__dbg();
+	// return;
+
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
 	// if (pixel_coords.x > scene.canvas_width) {
 	// 	__dbg();
@@ -426,7 +431,7 @@ void main()
 		tm = calcInter(ro,rd,ob,col,mat);
 		if(tm < maxDist)
 		{
-			__dbg();
+			//__dbg();
 			pt = ro + rd*tm;
 			n = normalize(pt - ob.xyz);
 			//fresnel = getFresnel(n,rd,mat.x);

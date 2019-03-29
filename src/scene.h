@@ -26,15 +26,16 @@ typedef enum { ambient, point, direct } lightType;
 typedef enum { sphere } primitiveType;
 
 typedef struct {
-	vec3 pos;
-	vec3 direction;
-    vec3 color;
+	vec3 pos; float __p1;
+	vec3 direction; float __p2;
 
+    vec3 color;
     lightType type;
+
 	float intensity;
     float radius;
 
-    //float __padding[1];
+    float __padding[2];
 } rt_light;
 
 typedef struct {

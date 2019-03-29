@@ -50,7 +50,7 @@ private:
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
 	void glfw_mouse_callback(GLFWwindow * window, double xpos, double ypos);
 	rt_sphere create_spheres(vec3 center, vec3 color, float radius, int specular, float reflect, float refract, float diffuse);
-	rt_light create_light(lightType type, float intensity, vec3 position, vec3 direction);
+	rt_light create_light(lightType type, float intensity, vec3 color, vec3 position, vec3 direction);
 	rt_scene create_scene(int width, int height, int spheresCount, int lightCount);
 	void initBuffers();
 	void updateBuffers() const;
