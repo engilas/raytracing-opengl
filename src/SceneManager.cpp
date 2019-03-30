@@ -2,6 +2,8 @@
 #include "quaternion.h"
 #include <GLFW/glfw3.h>
 
+#define PI_F 3.14159265358979f
+
 SceneManager::SceneManager(int wind_width, int wind_height, GLFWwindow* window)
 {
 	this->wind_width = wind_width;
@@ -92,7 +94,6 @@ void SceneManager::UpdateScene(float frameRate)
 	const float xAxis[3] = { 1, 0, 0 };
 	const float yAxis[3] = { 0, 1, 0 };
 	const float zAxis[3] = { 0, 0, 1 };
-	const float PI_F = 3.14159265358979f;
 
 	Quaternion<float> qX(xAxis, -pitch * PI_F / 180.0f);
 	Quaternion<float> qY(yAxis, yaw * PI_F / 180.0f);
@@ -103,6 +104,8 @@ void SceneManager::UpdateScene(float frameRate)
 	auto speed = frameRate;
 	if (shift_pressed)
 		speed *= 3;
+	if (alt_pressed)
+		speed /= 6;
 
 	if (w_pressed)
 		moveCamera(q, zAxis, scene.camera_pos, speed);
@@ -143,6 +146,8 @@ void SceneManager::glfw_key_callback(GLFWwindow* window, int key, int scancode, 
 			ctrl_pressed = pressed;
 		else if (key == GLFW_KEY_LEFT_SHIFT)
 			shift_pressed = pressed;
+		else if (key == GLFW_KEY_LEFT_ALT)
+			alt_pressed = pressed;
 	}
 }
 
@@ -267,11 +272,11 @@ void SceneManager::initBuffers()
 	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
 	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 2, 500, 0.3f, 0, 0));
 	spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f, 0, 1));
-	spheres.push_back(create_spheres({ 0,-5001,3 }, { 1,1,0 }, 5000, 50, 0.0f, 0, 1));
+	spheres.push_back(create_spheres({ 0,-1001,3 }, { 1,1,0 }, 1000, 50, 0.0f, 0, 0.7));
 	spheres.push_back(create_spheres({ 0,0.8,1 }, { 0,0,0 }, 0.5, 500, 0.4f, 1.5, 1));
 
-	//lights.push_back(create_light(ambient, 0.2f, { 0 }, { 0 }));
-	lights.push_back(create_light(point, 0.6f, {1,1,1}, { 2, 1, 0 }, { 0 }));
+	lights.push_back(create_light(ambient, 0.2f, { 1,1,1 }, { 0 }, { 0 }));
+	lights.push_back(create_light(point, 5.9f, {1,1,1}, { 2, 1, 0 }, { 0 }));
 	//lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));
 
 	/*spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.2f, 1.7));

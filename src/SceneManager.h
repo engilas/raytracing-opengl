@@ -30,6 +30,7 @@ private:
 	bool ctrl_pressed = false;
 	bool shift_pressed = false;
 	bool space_pressed = false;
+	bool alt_pressed = false;
 
 	float lastX = 0;
 	float lastY = 0;

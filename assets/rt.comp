@@ -8,6 +8,7 @@
 
 #define FLT_MIN 1.175494351e-38
 #define FLT_MAX 3.402823466e+38
+#define PI_F 3.14159265358979f
 
 #define LIGHT_AMBIENT 0
 #define LIGHT_POINT 1
@@ -250,8 +251,12 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 	//if(diffuse > 0.0) //If its not a light
 	{
 		for (int i = 0; i < scene.light_count; i++) {
-			// if (lights[i].type == LIGHT_AMBIENT) {
-			// 	pixelColor += lights[i].intensity;
+			lcol = lights[i].color;
+			 if (lights[i].type == LIGHT_AMBIENT) {
+			 	pixelColor += lights[i].intensity * col * lcol;
+				 continue;
+			 }
+			
 			// } else {
 				//if (lights[i].type == LIGHT_POINT) {
 					l = lights[i].pos - pt;
@@ -260,26 +265,31 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 				// }
 				dist = length(l);
 				l = normalize(l);
-				lcol = lights[i].color;
+				
 
 				// diffuse
 				float dp = clamp(dot(n, l), 0.0, 1.0);
-				if (doShadow && (dp == 0 || inShadow(pt, l, dist))) {
+				#if SHADOW_ENABLED
+				if (doShadow && ( inShadow(pt, l, dist))) {
 					continue;
 				}
+				#endif
 				pixelColor += ( 
+					//lcol * lights[i].intensity * diffuse * col
 				ambcol * lcol + scol * 
-				dp * lcol 
+				dp * lcol// * diffuse * col * lights[i].intensity
 				//* col
-				 ) / (1.0 + dist * dist);
+				 ) / 
+				 //(4 * PI_F * dist * dist);
+				  (1.0 + dist * dist);
 
-				 // specular highlight
-				// if (specPower > 0.0)
-				// {
-				// 	vec3 reflection = reflect(l, n);
-				// 	dp = clamp(dot(rd, reflection), 0.0, 1.0);
-				// 	pixelColor += lcol * pow(dp, specPower);    
-				// }
+				// specular highlight
+				if (specPower <= 0.0) continue;
+				vec3 reflection = reflect(l, n);
+				dp = clamp(dot(rd, reflection), 0.0, 1.0);
+				if (dp == 0) continue;
+				pixelColor += lcol * pow(dp, specPower)*0.6;// * lights[i].intensity;    
+				
 			//}
 		}
 
