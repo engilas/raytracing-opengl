@@ -3,25 +3,23 @@
 #include "primitives.h"
 
 typedef struct {
+	vec3 color; float __p1;
+
 	vec3 absorb;
 	float diffuse;
 
 	float reflect;
 	float refract;
 	int specular;
-    float kd;
+	float kd;
 
 	float ks;
-
     float __padding[3];
 } rt_material;
 
 typedef struct {
     rt_material material; 
-	vec3 pos; float __p1;
-	vec3 color; float __p2;
-
-    vec3 absorb;
+	vec3 pos;
 	float radius;
 } rt_sphere;
 

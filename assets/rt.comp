@@ -27,6 +27,7 @@
 #define AIM_ENABLED 1
 
 struct rt_material {
+	vec3 color;
 	vec3 absorb;
 
 	float diffuse;
@@ -40,9 +41,6 @@ struct rt_material {
 struct rt_sphere {
 	rt_material material;
 	vec3 pos;
-	vec3 color;
-	vec3 absorb;
-	
 
 	float radius;
 };
@@ -185,7 +183,7 @@ float calcInter(vec3 ro, vec3 rd, out vec3 ob, out vec3 col,out rt_material mat)
 		if(intersectSphere(ro,rd, pos, spheres[i].radius,tm,t)) 
 		{ 
 			ob = pos; 
-			col = spheres[i].color; 
+			col = spheres[i].material.color; 
 			tm = t; 
 			mat = spheres[i].material; 
 		}	
