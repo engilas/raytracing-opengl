@@ -33,6 +33,8 @@ struct rt_material {
 	float reflect;
 	float refract;
 	int specular;
+	float kd;
+	float ks;
 };
 
 struct rt_sphere {
@@ -231,13 +233,15 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	return false;
 }
 
-vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specPower, bool doShadow)
+vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
 {
 	float dist, distDiv;
 	vec3 lcol,l;
 	//vec3 distDiv;
 	//vec3 ambcol = amb * (1.0-diffuse) * col;
 	//vec3 scol = diffuse * col;
+	vec3 diffuse = vec3(0);
+	vec3 specular = vec3(0);
 
 	vec3 pixelColor =  vec3(0);//col * LIGHT_AMBIENT2;
 	//if(diffuse > 0.0) //If its not a light
@@ -268,8 +272,8 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 				continue;
 			}
 			#endif
-			pixelColor += ( 
-				lcol * col * dp * lights[i].intensity * diffuse
+			diffuse += ( 
+				lcol * col * dp * lights[i].intensity * albedo
 				// lcol * col * lights[i].intensity * dp
 				//lcol * lights[i].intensity * diffuse * col
 			//ambcol * lcol + scol * 
@@ -287,8 +291,9 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 			float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
 			if (specDp == 0) continue;
 			//pow(rDotV / (length(r) * length(view)), specular);
-			pixelColor += col * lcol * pow(specDp, specPower) * dp * lights[i].intensity / distDiv;
+			specular += lcol * pow(specDp, specPower) * dp * lights[i].intensity / distDiv;
 		}
+		pixelColor = diffuse * kd + specular * ks;
 
 		// for (int i = 0; i < 2; i++)
 		// {
@@ -365,7 +370,7 @@ vec3 getReflection(vec3 ro,vec3 rd)
 		vec3 n = normalize(pt - ob);
 		bool outside = dot(rd, n) < 0;
 		//vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specPower, bool doShadow)
-		color = LightPixel2(outside ? pt + n * eps : pt - n * eps,rd,col,mat.diffuse,n,mat.specular, true);
+		color = LightPixel2(outside ? pt + n * eps : pt - n * eps,rd,col,mat.diffuse,n,mat.specular, true, mat.kd, mat.ks);
 	}
 	return color;
 }
@@ -493,7 +498,7 @@ void main()
 				ro = outside ? pt + n * eps : pt - n * eps;
 				//color += calcShade(ro,ob,col,mat,outside ? n : -n) * refractMultiplier * mask;
 				//vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specPower, bool doShadow)
-				color += LightPixel2(ro, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true)* refractMultiplier * mask;
+				color += LightPixel2(ro, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
@@ -501,7 +506,7 @@ void main()
             {
 				//color += calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,outside ? n : -n) * mask;
 				//(vec3 pt, vec3 rd, vec3 diffuse, vec4 col, vec3 n, float specPower, bool doShadow)
-				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true) * mask;
+				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks) * mask;
                 break;
             }
 			

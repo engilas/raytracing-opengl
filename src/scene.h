@@ -9,8 +9,11 @@ typedef struct {
 	float reflect;
 	float refract;
 	int specular;
+    float kd;
 
-    float __padding[1];
+	float ks;
+
+    float __padding[3];
 } rt_material;
 
 typedef struct {
