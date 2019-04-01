@@ -116,10 +116,6 @@ void _dbg(vec3 value)
 	#endif
 }
 
-float norm(vec3 v) {
-	return v.x * v.x + v.y * v.y + v.z * v.z;
-}
-
 const int iterations = 5;
 const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
@@ -161,10 +157,6 @@ vec3 getRayDir(ivec2 pixel_coords)
 	return normalize(Rotate(scene.quat_camera_rotation, result));
 }
 
-
-// The Intersection funtions and shading funcs are taken from inigo's article:
-// http://www.iquilezles.org/www/articles/simplegpurt/simplegpurt.htm
-
 bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out float t)
 {
     bool r = false;
@@ -174,7 +166,6 @@ bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out floa
 	t = b*b-c;
     if( t > 0.0 )
     {
-		//__dbg();
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
 		#if MULTI_INTERSECTION
@@ -187,17 +178,10 @@ bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out floa
 
 float calcInter(vec3 ro, vec3 rd, out vec3 ob, out vec3 col,out rt_material mat)
 {
-	// if (spheres[1].radius == 2) __dbg();
-	// return 10000;
-
 	float tm = maxDist;
 	float t;
-	//if (scene.light_count == 2) __dbg();
 	for (int i = 0; i < scene.sphere_count; i++) {
-		//if (spheres[i].radius == 1) __dbg();
-		//__dbg();
 		vec3 pos = spheres[i].pos;
-		//if (spheres[i].material.refract > 0) __dbg();
 		if(intersectSphere(ro,rd, pos, spheres[i].radius,tm,t)) 
 		{ 
 			ob = pos; 
@@ -206,18 +190,6 @@ float calcInter(vec3 ro, vec3 rd, out vec3 ob, out vec3 col,out rt_material mat)
 			mat = spheres[i].material; 
 		}	
 	}
-
-	// if(intersectSphere(ro,rd,spheres[0],tm,t)) { ob = spheres[0]; col = colors[0]; tm = t; mat = materials[0]; }
-	// if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = colors[1]; tm = t; mat = materials[1]; }
-	// if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = colors[2]; tm = t; mat = materials[2]; }
-	// if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = colors[3]; tm = t; mat = materials[3]; }
-	// //if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = colors[4]; tm = t; mat = materials[4]; }
-	// if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = colors[5]; tm = t; mat = materials[5]; }
-	// if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = colors[6]; tm = t; mat = materials[6]; }
-	// if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = colors[7]; tm = t; mat = materials[7]; }
-	// if(intersectSphere(ro,rd,spheres[8],tm,t)) { ob = spheres[8]; col = colors[8]; tm = t; mat = materials[8]; }
-    // if(intersectSphere(ro,rd,spheres[9],tm,t)) { ob = spheres[9]; col = colors[9]; tm = t; mat = materials[9]; }
-	//if(intersectSphere(ro,rd,spheres[10],tm,t)) { ob = spheres[9]; col = colors[10]; tm = t; mat = materials[10]; }
 
 	return tm;
 }
@@ -327,7 +299,6 @@ vec3 getReflection(vec3 ro,vec3 rd)
 		vec3 pt = ro + rd*tm;
 		vec3 n = normalize(pt - ob);
 		bool outside = dot(rd, n) < 0;
-		//vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specPower, bool doShadow)
 		color = LightPixel2(outside ? pt + n * eps : pt - n * eps,rd,col,mat.diffuse,n,mat.specular, true, mat.kd, mat.ks);
 	}
 	return color;

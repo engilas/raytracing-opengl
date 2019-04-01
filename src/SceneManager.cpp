@@ -222,33 +222,6 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 {
 	auto min = width > height ? height : width;
 
-	/*std::vector<rt_sphere> spheres;
-	std::vector<rt_light> lights;*/
-
-	//spheres.push_back(create_spheres({ 2,0,4 }, { 0,1,0 }, 1, 10, 0.2f));
-	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f));
-	//spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f));
-	//spheres.push_back(create_spheres({ 0,-5001,3 }, { 1,1,0 }, 5000, 50, 0.2f));
-	////for (cl_float x = 0.2; x < 8; x++)
-	////for (cl_float y = 0; y < 2; y++)
-	////for (cl_float z = 0; z < 3; z++)
-	////{
-	////	cl_float r = (cl_float)rand() / (cl_float)RAND_MAX;
-	////	cl_float g = (cl_float)rand() / (cl_float)RAND_MAX;
-	////	cl_float b = (cl_float)rand() / (cl_float)RAND_MAX;
-	////	cl_float reflect = (cl_float)rand() / (cl_float)RAND_MAX;
-	////	cl_int specular = rand() % 500;
-	////	//reflect = 0.02;
-
-	////	spheres.push_back(create_spheres({ x - 3, y, z - 2.5f }, { r,g,b }, 0.4f, specular, reflect));
-	////}
-
-	//lights.push_back(create_light(ambient, 0.2f, { 0 }, { 0 }));
-	//lights.push_back(create_light(point, 0.6f, { 2,1,0 }, { 0 }));
-	//lights.push_back(create_light(direct, 0.2f, { 0 }, { 1,4,4 }));
-
-	//spheres.push_back(create_spheres({ 2,1,0 }, { 1,1,1 }, 0.2, 0, 0));
-
 	rt_scene scene = {};
 
 	scene.camera_pos = {};
@@ -278,11 +251,11 @@ void SceneManager::initBuffers()
 	spheres.push_back(create_spheres({ 0,0.8,1 }, { 0,0,0 }, 0.5, 500, 0.1f, 1.125, 0.7));
 
 	//lights.push_back(create_light(ambient, 0.2f, { 1,1,1 }, { 0 }, { 0 }));
-	lights.push_back(create_light(point, 55.0f, {0.0,0.9,0.7}, { 2, 5, 0 }, { 0 }));
+	lights.push_back(create_light(point, 55.0f, {1.0,1.0,1.0}, { 2, 5, 0 }, { 0 }));
 	//lights.push_back(create_light(direct, 2.2f, { 1,1,1 }, { 0 }, { -1,-4,-4 }));
 
-	/*spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.2f, 1.7));
-	rotating_primitives.push_back({ &spheres.back(), sphere, 9, 4, 0, 1 });*/
+	spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.05f, 1.125, 0));
+	rotating_primitives.push_back({ &spheres.back(), sphere, 9, 4, 0, 1 });
 
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size());
 
@@ -316,20 +289,6 @@ void SceneManager::updateBuffers() const
 	GLvoid* spheres_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 	memcpy(spheres_p, spheres.data(), sizeof(rt_sphere) * spheres.size());
 	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-
-	//GLint bufMask = GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT;
-	//auto spheres = (rt_sphere*) glMapBufferRange(GL_SHADER_STORAGE_BUFFER, 0, sizeof(arr), bufMask);
-	//for (int i = 0; i < 2; ++i)
-	//{
-	//    colors[i].x[0] = 0.3;
-	//    colors[i].x[1] = 0.5;
-	//    colors[i].x[2] = 0.7;
-	//    colors[i].x[3] = 1;
-	//    colors[i].r2 = 0.1;
-	//}
-	////auto c2 = colors + 1;
-	////memcpy(colors, arr, sizeof(arr));
-	//glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
 }
 
 vec3 SceneManager::getColor(float r, float g, float b)
