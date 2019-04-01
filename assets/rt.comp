@@ -219,29 +219,19 @@ float calcInter(vec3 ro, vec3 rd, out vec3 ob, out vec3 col,out rt_material mat)
 bool inShadow(vec3 ro,vec3 rd,float d)
 {
 	float t;
-	bool ret = false;
-
 	for (int i = 0; i < scene.sphere_count; i++) {
-		if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) { ret = true ;}
+		if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
+			return true;
+		} 
 	}
-	return ret;
-	// if(intersectSphere(ro,rd,spheres[2],d,t)){ ret = true; }
-	// if(intersectSphere(ro,rd,spheres[3],d,t)){ ret = true; }
-	// //if(intersectSphere(ro,rd,spheres[4],d,t)){ ret = true; }
-	// if(intersectSphere(ro,rd,spheres[5],d,t)){ ret = true; }
-	// if(intersectSphere(ro,rd,spheres[6],d,t)){ ret = true; }
-	// if(intersectSphere(ro,rd,spheres[7],d,t)){ ret = true; }
-	// if(intersectSphere(ro,rd,spheres[8],d,t)){ ret = true; }
-	// if(intersectSphere(ro,rd,spheres[9],d,t)){ ret = true; }
-	// //if(intersectSphere(ro,rd,spheres[10],d,t)){ ret = true; }
-
-	//return ret;
+	return false;
 }
 
 vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specPower, bool doShadow)
 {
-	float dist;
+	float dist, distDiv;
 	vec3 lcol,l;
+	//vec3 distDiv;
 	//vec3 ambcol = amb * (1.0-diffuse) * col;
 	//vec3 scol = diffuse * col;
 
@@ -254,45 +244,45 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float diffuse, vec3 n, float specP
 				pixelColor += lights[i].intensity * col * lcol;
 				continue;
 			}
-			
-			// } else {
-				if (lights[i].type == LIGHT_POINT) {
-					l = lights[i].pos - pt;
-				 } else {
-				 	l = lights[i].direction;
-				 }
+
+			if (lights[i].type == LIGHT_POINT) {
+				l = lights[i].pos - pt;
 				dist = length(l);
-				l = normalize(l);
-				
+				distDiv = 1 + dist * dist;
+			} else {
+				l = - lights[i].direction;
+				dist = maxDist;
+				distDiv = 1;
+			}
+			l = normalize(l);
+			
+			// diffuse
+			float dp = clamp(dot(n, l), 0.0, 1.0);
+			#if SHADOW_ENABLED
+			if (doShadow && (dp <= 0 || inShadow(pt, l, dist))) {
+				continue;
+			}
+			#endif
+			pixelColor += ( 
+				lcol * col * dp * lights[i].intensity //* diffuse
+				// lcol * col * lights[i].intensity * dp
+				//lcol * lights[i].intensity * diffuse * col
+			//ambcol * lcol + scol * 
+			//dp * lcol
+			// * diffuse * col //* lights[i].intensity
+			//* col
+				) / distDiv;
+				// / 
+				//(4 * PI_F * dist * dist);
+				//(1.0 + dist * dist);
 
-				// diffuse
-				float dp = clamp(dot(n, l), 0.0, 1.0);
-				#if SHADOW_ENABLED
-				if (doShadow && (dp <= 0 || inShadow(pt, l, dist))) {
-					continue;
-				}
-				#endif
-				pixelColor += ( 
-					lcol * col * lights[i].intensity * dp * diffuse
-					// lcol * col * lights[i].intensity * dp
-					//lcol * lights[i].intensity * diffuse * col
-				//ambcol * lcol + scol * 
-				//dp * lcol
-				// * diffuse * col //* lights[i].intensity
-				//* col
-				 ) / 
-				 //(4 * PI_F * dist * dist);
-				  (1.0 + dist * dist);
-
-				// specular highlight
-				if (specPower <= 0.0) continue;
-				vec3 reflection = reflect(l, n);
-				dp = clamp(dot(rd, reflection), 0.0, 1.0);
-				if (dp == 0) continue;
-				//pow(rDotV / (length(r) * length(view)), specular);
-				pixelColor += col * lcol * pow(dp / (length(r) * length(view)), specPower) * lights[i].intensity;    
-				
-			//}
+			// specular highlight
+			if (specPower <= 0.0) continue;
+			vec3 reflection = reflect(l, n);
+			float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
+			if (specDp == 0) continue;
+			//pow(rDotV / (length(r) * length(view)), specular);
+			pixelColor += col * lcol * pow(specDp , specPower) * dp * lights[i].intensity;
 		}
 
 		// for (int i = 0; i < 2; i++)
