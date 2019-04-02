@@ -88,7 +88,7 @@ layout( std430, binding=1 ) readonly buffer scene_buf
 
 layout( std430, binding=2 ) readonly buffer spheres_buf
 {
-    rt_sphere spheres[ ];
+    rt_sphere spheress[ ];
 };
 
 layout( std430, binding=3 ) readonly buffer plains_buf
@@ -137,6 +137,74 @@ const int iterations = 5;
 const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
 const float eps = 0.001;
+
+#define sp_size 7
+
+rt_sphere spheres[sp_size];
+//vec4 colors[sp_size];
+//vec2 materials[sp_size];
+
+void init()
+{
+    // X Y Z Radius
+    // spheres[0] = vec4(      0.8,       0,    -1.5,    0.1);
+    // spheres[1] = vec4(      -0.8,    0.25,    -1.5,    0.1);
+	rt_material mat = rt_material(vec3(1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
+
+    spheres[0] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	spheres[1] = rt_sphere(mat,vec3(1006.0,       0,       0), 1000);
+	spheres[2] = rt_sphere(mat,vec3(-1006.0,       0,       0), 1000);
+	spheres[3] = rt_sphere(mat,vec3(      0,  1006.0,       0), 1000);
+	spheres[4] = rt_sphere(mat,vec3(      0,  -1006.0,       0), 1000);
+	spheres[5] = rt_sphere(mat,vec3(      0,       0, 1006.0), 1000);
+	spheres[6] = rt_sphere(mat,vec3(      0,       0, -1006.0), 1000);
+	// spheres[2] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	// spheres[3] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	// spheres[4] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	// spheres[5] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	// spheres[6] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	
+	 //vec4(      0,    -0.7,    -1.5,    0.3);
+    // spheres[3] = vec4(      0,    -0.1,    -0.5,    0.3);
+    // spheres[4] = vec4(      0,    -0.1,    -1.5,    0.15);
+    // spheres[1] = vec4( 1006.0,       0,       0, 1000.0); 
+    // spheres[2] = vec4(-1006.0,       0,       0, 1000.0);
+    // spheres[3] = vec4(      0,  1006.0,       0, 1000.0); 
+    // spheres[4] = vec4(      0, -1001.0,       0, 1000.0);
+    // spheres[5] = vec4(      0,       0, -1006.0, 1000.0);
+	// spheres[6] =vec4(      0,    -0.1,  1006.0, 1000.0);
+
+    //R G B Diffuse
+    // colors[0] = vec4(1.0, 0.8, 0.0,-1.0);
+    // colors[1] = vec4(0.0, 0.0, 1.0,-1.0);
+    // colors[2] = vec4(1.0, 1.0, 1.0, 1.0);
+    // colors[3] = vec4(1.0, 1.0, 1.0, 1.0);
+    // colors[4] = vec4(1.0, 0.0, 0.0, 1.0);
+    // colors[5] = vec4(0.0, 1.0, 0.0, 0.7);
+    // colors[6] = vec4(1.0, 0.0, 0.0, 0.7);
+    // colors[7] = vec4(1.0, 1.0, 1.0, 0.7);
+    // colors[8] = vec4(1.0, 1.0, 1.0, 0.7);
+    // colors[9] = vec4(1.0, 1.0, 1.0, 0.7);
+	// colors[10] = vec4(1.0, 1.0, 1.0, 0.7);
+
+    // //Reflection Coeff, Refraction index
+    // materials[0] = vec2 (0.0, 0.0);
+    // materials[1] = vec2 (0.0, 0.0);				
+    // materials[2] = vec2 (1.0, 0.0);	
+    // materials[3] = vec2 (0.1, 1.125);	
+    // materials[4] = vec2 (0.1, 1.25);
+    // materials[5] = vec2 (0.1, 0.0);				
+    // materials[6] = vec2 (0.1, 0.0);				
+    // materials[7] = vec2 (0.1, 0.0);				
+    // materials[8] = vec2 (0.1, 0.0);				
+    // materials[9] = vec2 (0.1, 0.0);
+	// materials[10] = vec2 (0.1, 0.0);	
+
+    // cam.up       = vec3(0.0, 1.0, 0.0);
+    // cam.right    = vec3(1.0, 0.0, 0.0);
+    // cam.forward  = vec3(0.0, 0.0,-1.0);
+    // cam.position = vec3(0.0, 0.0,-0.2);
+}
 
 vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
 	vec4 result;
@@ -235,7 +303,11 @@ bool calcInter(vec3 ro, vec3 rd, out vec3 pt, out vec3 normal, out rt_material m
 	// 	}	
 	// }
 	//if (num == -1) retur
-	if (type == 0) return false;
+	bool res;
+
+	res = type != 0;
+	//if (type == 0) res = false;
+
 
 	pt = ro + rd*tm;
 	//if (type == 1) {
@@ -247,25 +319,25 @@ bool calcInter(vec3 ro, vec3 rd, out vec3 pt, out vec3 normal, out rt_material m
 	// 	mat = plains[num].material;
 	// } 
 
-	return true;
+	return res;
 }
 
 bool inShadow(vec3 ro,vec3 rd,float d)
 {
-	//bool ret = false;
+	bool ret = false;
 	float t;
-	// if(intersectSphere(ro,rd,spheres[0].pos,spheres[0].radius,d,t)) {ret = true;}
-	// if(intersectSphere(ro,rd,spheres[1].pos,spheres[1].radius,d,t)) {ret = true;}
-	// if(intersectSphere(ro,rd,spheres[2].pos,spheres[2].radius,d,t)) {ret = true;}
-	// if(intersectSphere(ro,rd,spheres[3].pos,spheres[3].radius,d,t)) {ret = true;}
-	// if(intersectSphere(ro,rd,spheres[4].pos,spheres[4].radius,d,t)) {ret = true;}
-	// if(intersectSphere(ro,rd,spheres[5].pos,spheres[5].radius,d,t)) {ret = true;}
-	// if(intersectSphere(ro,rd,spheres[6].pos,spheres[6].radius,d,t)) {ret = true;}
-	for (int i = 0; i < scene.sphere_count; ++i) {
-		if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
-			return true;
-		} 
-	}
+	if(intersectSphere(ro,rd,spheres[0].pos,spheres[0].radius,d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[1].pos,spheres[1].radius,d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[2].pos,spheres[2].radius,d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[3].pos,spheres[3].radius,d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[4].pos,spheres[4].radius,d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[5].pos,spheres[5].radius,d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[6].pos,spheres[6].radius,d,t)) {ret = true;}
+	// for (int i = 0; i < scene.sphere_count; ++i) {
+	// 	if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
+	// 		return true;
+	// 	} 
+	// }
 
 	// for (int i = 0; i < scene.sphere_count; i++) {
 	// 	if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
@@ -277,8 +349,10 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	// 		return true;
 	// 	} 
 	// }
-	return false;
+	return ret;
 }
+
+#define light_counts 1
 
 vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
 {
@@ -291,43 +365,43 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 	//return vec3(1);
 	//if(diffuse > 0.0) //If its not a light
 	{
-		for (int i = 0; i < scene.light_count; i++) {
+		for (int i = 0; i < 1; i++) {
 			lcol = lights[i].color;
-			if (lights[i].type == LIGHT_AMBIENT) {
-				pixelColor += lights[i].intensity * col * lcol;
-				continue;
-			}
+			// if (lights[i].type == LIGHT_AMBIENT) {
+			// 	pixelColor += lights[i].intensity * col * lcol;
+			// 	continue;
+			// }
 
-			if (lights[i].type == LIGHT_POINT) {
+			//if (lights[i].type == LIGHT_POINT) {
 				l = lights[i].pos - pt;
 				dist = length(l);
 				//distDiv = dist;
 				distDiv = 1 + dist*dist; // 1 + dist * dist;
-			} else {
-				l = - lights[i].direction;
-				dist = maxDist;
-				distDiv = 1;
-			}
+			// } else {
+			// 	l = - lights[i].direction;
+			// 	dist = maxDist;
+			// 	distDiv = 1;
+			// }
 			l = normalize(l);
 			
+			float shadowMult = 1;
 			// diffuse
 			float dp = clamp(dot(n, l), 0.0, 1.0);
 			#if SHADOW_ENABLED
 			if (doShadow
-			 //&& (dp <= 0 || inShadow(pt, l, dist))
+			 && (dp <= 0 || inShadow(pt, l, dist))
 			 ) {
-				if (dp <= 0) continue;
-				if (inShadow(pt, l, dist)) continue;
+				//if (dp <= 0) continue;
+				//if (inShadow(pt, l, dist)) continue;
+				//continue;
+				shadowMult = 0;
 			}
 			#endif
-			diffuse += lcol * col * dp * lights[i].intensity * albedo / distDiv;
-
-			// specular highlight
-			// if (specPower <= 0.0) continue;
-			// vec3 reflection = reflect(l, n);
-			// float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
-			// if (specDp == 0) continue;
-			// specular += lcol * pow(specDp, specPower) * dp * lights[i].intensity / distDiv;
+			diffuse += shadowMult * lcol * col * dp * lights[i].intensity * albedo / distDiv;
+			
+			vec3 reflection = reflect(l, n);
+			float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
+			specular += shadowMult * lcol * pow(specDp, specPower) * dp * lights[i].intensity / distDiv;
 		}
 		pixelColor = diffuse * kd + specular * ks;
 	} //else return col;
@@ -413,6 +487,8 @@ void main()
 		return;
 	}
 	#endif
+
+	init();
 
 	float reflectMultiplier,refractMultiplier,tm;
 	vec3 ob,col;

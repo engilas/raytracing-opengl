@@ -262,7 +262,7 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 void SceneManager::initBuffers()
 {
     //create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 0.1));
-	spheres.push_back(create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 0.1)));
+	spheres.push_back(create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 1.0)));
 	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 0, 0.7));
 
 	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
