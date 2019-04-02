@@ -195,13 +195,11 @@ bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out floa
 
 bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
 	float denom = clamp(dot(n, rd), -1, 1); 
-    if (abs(denom) > 1e-6) { 
+    if (denom < -1e-6) { 
 		//_dbg();
         vec3 p_ro = p - ro; 
         t = dot(p_ro, n) / denom; 
-        bool r = (t > 0) && (t < tm); 
-		if (r) _dbg();
-		return r;
+        return (t > 0) && (t < tm);
     } 
  
     return false; 
@@ -237,7 +235,7 @@ float calcInter(vec3 ro, vec3 rd, out vec3 pt, out vec3 normal, out rt_material 
 		mat = spheres[num].material;
 	} 
 	if (type == 2) {
-		normal = normalize(plains[num].normal);
+		normal = plains[num].normal;
 		mat = plains[num].material;
 	} 
 
