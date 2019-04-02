@@ -16,6 +16,7 @@ public:
 private:
 	std::vector<rt_sphere> spheres;
 	std::vector<rt_light> lights;
+    std::vector<rt_plain> plains;
 	std::vector<rotating_primitive> rotating_primitives;
 	rt_scene scene;
 
@@ -39,6 +40,7 @@ private:
 
 	GLuint sceneSsbo = 0;
 	GLuint sphereSsbo = 0;
+    GLuint plainSsbo = 0;
 	GLuint lightSsbo = 0;
 
 	void multiplyVector(float v[3], float s);
@@ -50,9 +52,11 @@ private:
 	void glfw_key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
 	void glfw_mouse_callback(GLFWwindow * window, double xpos, double ypos);
-	rt_sphere create_spheres(vec3 center, vec3 color, float radius, int specular, float reflect, float refract, float diffuse);
-	rt_light create_light(lightType type, float intensity, vec3 color, vec3 position, vec3 direction);
-	rt_scene create_scene(int width, int height, int spheresCount, int lightCount);
+    rt_material create_material(vec3 color, int specular, float reflect, float refract, vec3 absorb, float diffuse, float kd, float ks);
+    rt_sphere create_sphere(vec3 center, float radius, rt_material material);
+    rt_plain create_plain(vec3 normal,vec3 pos,rt_material material);
+    rt_light create_light(lightType type, float intensity, vec3 color, vec3 position, vec3 direction);
+	rt_scene create_scene(int width, int height, int spheresCount, int lightCount, int plainCount);
 	void initBuffers();
 	void updateBuffers() const;
 	vec3 getColor(float r, float g, float b);

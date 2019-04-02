@@ -5,12 +5,12 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 
-static int wind_width = 1680;
-static int wind_height = 1050;
+static int wind_width = 160;
+static int wind_height = 160;
 
 int main()
 {
-#define FULLSCREEN 0
+#define FULLSCREEN 1
 
 #if FULLSCREEN
     GLWrapper glWrapper(true);

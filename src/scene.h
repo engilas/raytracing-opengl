@@ -23,6 +23,12 @@ typedef struct {
 	float radius;
 } rt_sphere;
 
+struct rt_plain {
+	rt_material material;
+    vec3 pos; float __p1;
+	vec3 normal; float __p2;
+};
+
 typedef enum { ambient, point, direct } lightType;
 typedef enum { sphere } primitiveType;
 
@@ -54,8 +60,9 @@ typedef struct {
 	int reflect_depth;
 	int sphere_count;
 	int light_count;
+    int plain_count;
 
-    float __padding[1];
+    //float __padding[1];
 } rt_scene;
 
 typedef struct
