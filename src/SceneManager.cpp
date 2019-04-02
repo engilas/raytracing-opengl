@@ -287,18 +287,18 @@ void SceneManager::initBuffers()
     plainMat.diffuse = 0.7;
     plainMat.kd = 0.8;
     plainMat.ks = 0.2;*/
-    plains.push_back(create_plain({0,1,0}, {0,-1,0}, create_material({1,1,1}, 50, 0.1)));
+    /*plains.push_back(create_plain({0,1,0}, {0,-1,0}, create_material({1,1,1}, 50, 0.1)));
     plains.push_back(create_plain({0,-1,0}, {0,6,0}, create_material({1,1,1}, 50, 0.1)));
     plains.push_back(create_plain({0,0,-1}, {0,0,6}, create_material({1,1,1}, 50, 0.1)));
     plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
     plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
-    plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));
-    /*spheres.push_back(create_sphere({ 0,-1001,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));*/
+    spheres.push_back(create_sphere({ 0,-1001,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({ 0, 1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({ 1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({ -1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({0, 0, 1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    spheres.push_back(create_sphere({0, 0, -1006 }, 1000, create_material({1,1,1}, 30, 0.1)));*/
+    spheres.push_back(create_sphere({0, 0, -1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
 
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size(), plains.size());
 
