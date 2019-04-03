@@ -39,8 +39,9 @@ struct rt_material {
 };
 
 struct rt_sphere {
-	rt_material material;
+	vec3 color;
 	vec3 pos;
+	vec2 material;
 
 	float radius;
 };
@@ -98,7 +99,7 @@ layout( std430, binding=3 ) readonly buffer plains_buf
 
 layout( std430, binding=4 ) readonly buffer lights_buf
 {
-    rt_light lights[ ];
+    rt_light lightss[ ];
 };
 
 #if DBG
@@ -138,26 +139,45 @@ const float maxDist = 1000.0;
 const vec3 amb = vec3(1.0);
 const float eps = 0.001;
 
-#define sp_size 7
+#define sp_size 8
 
-rt_sphere spheres[sp_size];
+vec4 spheres[sp_size];
 //vec4 colors[sp_size];
-//vec2 materials[sp_size];
+vec2 materials[sp_size];
+
+
+// struct rt_sphere {
+// 	vec3 color;
+// 	vec3 pos;
+// 	vec2 material;
+
+// 	float radius;
+// };
 
 void init()
 {
     // X Y Z Radius
     // spheres[0] = vec4(      0.8,       0,    -1.5,    0.1);
     // spheres[1] = vec4(      -0.8,    0.25,    -1.5,    0.1);
-	rt_material mat = rt_material(vec3(1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
+	//rt_material mat = rt_material(vec3(1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
 
-    spheres[0] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
-	spheres[1] = rt_sphere(mat,vec3(1006.0,       0,       0), 1000);
-	spheres[2] = rt_sphere(mat,vec3(-1006.0,       0,       0), 1000);
-	spheres[3] = rt_sphere(mat,vec3(      0,  1006.0,       0), 1000);
-	spheres[4] = rt_sphere(mat,vec3(      0,  -1006.0,       0), 1000);
-	spheres[5] = rt_sphere(mat,vec3(      0,       0, 1006.0), 1000);
-	spheres[6] = rt_sphere(mat,vec3(      0,       0, -1006.0), 1000);
+	spheres[0] = vec4(      0.8,       0,    -1.5, 1);
+    spheres[1] = vec4(1, 0.25, 1.5, 0.3); //rt_sphere(vec3(1),vec3(1, 0.25, 1.5), vec2(0.1,0), 0.3);
+	spheres[2] = vec4(1006.0,       0,        0, 1000);//rt_sphere(vec3(1),vec3(1006.0,       0,       0 ),vec2(0.1,0), 1000);
+	spheres[3] = vec4(-1006.0,       0,       0, 1000);//rt_sphere(vec3(1),vec3(-1006.0,       0,       0),vec2(0.1,0), 1000);
+	spheres[4] = vec4(      0,  1006.0,       0, 1000);//rt_sphere(vec3(1),vec3(      0,  1006.0,       0),vec2(0.1,0), 1000);
+	spheres[5] = vec4(      0,  -1006.0,      0, 1000);//rt_sphere(vec3(1),vec3(      0,  -1006.0,      0),vec2(0.1,0), 1000);
+	spheres[6] = vec4(      0,       0, 1006.0 , 1000);//rt_sphere(vec3(1),vec3(      0,       0, 1006.0 ), vec2(0.1,0), 1000);
+	spheres[7] = vec4(      0,       0, -1006.0, 1000);//rt_sphere(vec3(1),vec3(      0,       0, -1006.0),vec2(0.1,0), 1000);
+
+	materials[0] = vec2 (0.1, 0.0);	
+    materials[1] = vec2 (0.1, 0.0);
+    materials[2] = vec2 (0.1, 0.0);				
+    materials[3] = vec2 (0.1, 0.0);				
+    materials[4] = vec2 (0.1, 0.0);				
+    materials[5] = vec2 (0.1, 0.0);				
+    materials[6] = vec2 (0.1, 0.0);
+	materials[7] = vec2 (0.1, 0.0);
 	// spheres[2] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[3] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[4] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
@@ -242,12 +262,12 @@ vec3 getRayDir(ivec2 pixel_coords)
 	return normalize(Rotate(scene.quat_camera_rotation, result));
 }
 
-bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out float t)
+bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 {
     bool r = false;
-	vec3 v = ro - sp;
+	vec3 v = ro - sp.xyz;
 	float b = dot(v,rd);
-	float c = dot(v,v) - radius*radius;
+	float c = dot(v,v) - sp.w*sp.w;
 	t = b*b-c;
     if( t > 0.0 )
     {
@@ -261,78 +281,95 @@ bool intersectSphere(vec3 ro, vec3 rd, vec3 sp, float radius, float tm, out floa
     return r;
 }
 
-bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
-	float denom = clamp(dot(n, rd), -1, 1); 
-    if (denom < -1e-6) { 
-		//_dbg();
-        vec3 p_ro = p - ro; 
-        t = dot(p_ro, n) / denom; 
-        return (t > 0) && (t < tm);
-    } 
+// bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
+// 	float denom = clamp(dot(n, rd), -1, 1); 
+//     if (denom < -1e-6) { 
+// 		//_dbg();
+//         vec3 p_ro = p - ro; 
+//         t = dot(p_ro, n) / denom; 
+//         return (t > 0) && (t < tm);
+//     } 
  
-    return false; 
-}
+//     return false; 
+// }
 
-bool calcInter(vec3 ro, vec3 rd, out vec3 pt, out vec3 normal, out rt_material mat)
+float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec3 col, out vec2 mat)
 {
 	float tm = maxDist;
 	float t;
-	vec3 ob;
-	int type = 0; //1 - sphere, 2 - plain
-	int num;
-	if (intersectSphere(ro,rd, spheres[0].pos, spheres[0].radius,tm,t)) {tm = t; num = 0; type = 1;}
-	if (intersectSphere(ro,rd, spheres[1].pos, spheres[1].radius,tm,t)) {tm = t; num = 1; type = 1;}
-	if (intersectSphere(ro,rd, spheres[2].pos, spheres[2].radius,tm,t)) {tm = t; num = 2; type = 1;}
-	if (intersectSphere(ro,rd, spheres[3].pos, spheres[3].radius,tm,t)) {tm = t; num = 3; type = 1;}
-	if (intersectSphere(ro,rd, spheres[4].pos, spheres[4].radius,tm,t)) {tm = t; num = 4; type = 1;}
-	if (intersectSphere(ro,rd, spheres[5].pos, spheres[5].radius,tm,t)) {tm = t; num = 5; type = 1;}
-	if (intersectSphere(ro,rd, spheres[6].pos, spheres[6].radius,tm,t)) {tm = t; num = 6; type = 1;}
-	// for (int i = 0; i < scene.plain_count; i++) { 
-	// 	if (intersectPlain(ro, rd, plains[i].normal, plains[i].pos, tm, t)) {
-	// 		tm = t;
-	// 		num = i;
-	// 		type = 2;
-	// 	}
-	// }
-	// for (int i = 0; i < scene.sphere_count; i++) {
-	// 	if(intersectSphere(ro,rd, spheres[i].pos, spheres[i].radius,tm,t)) 
-	// 	{ 
-	// 		tm = t; 
-	// 		num = i;
-	// 		type = 1;
-	// 	}	
-	// }
-	//if (num == -1) retur
-	bool res;
 
-	res = type != 0;
-	//if (type == 0) res = false;
+	if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = vec3(1); tm = t; mat = materials[1]; }
+	if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = vec3(1); tm = t; mat = materials[2]; }
+	if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = vec3(1); tm = t; mat = materials[3]; }
+	if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = vec3(1); tm = t; mat = materials[4]; }
+	if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = vec3(1); tm = t; mat = materials[5]; }
+	if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = vec3(1); tm = t; mat = materials[6]; }
+    if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = vec3(1); tm = t; mat = materials[7]; }
+
+	return tm;
 
 
-	pt = ro + rd*tm;
-	//if (type == 1) {
-		normal = normalize(pt - spheres[num].pos);
-		mat = spheres[num].material;
-	//} 
-	// if (type == 2) {
-	// 	normal = plains[num].normal;
-	// 	mat = plains[num].material;
-	// } 
+	// float tm = maxDist;
+	// float t;
+	// vec3 ob;
+	// int type = 0; //1 - sphere, 2 - plain
+	// int num;
+	// //if (intersectSphere(ro,rd, spheres[0],tm,t)) {tm = t; num = 0; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[1],tm,t)) {tm = t; num = 1; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[2],tm,t)) {tm = t; num = 2; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[3],tm,t)) {tm = t; num = 3; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[4],tm,t)) {tm = t; num = 4; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[5],tm,t)) {tm = t; num = 5; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[6],tm,t)) {tm = t; num = 6; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[7],tm,t)) {tm = t; num = 7; type = 1;}
+	// // for (int i = 0; i < scene.plain_count; i++) { 
+	// // 	if (intersectPlain(ro, rd, plains[i].normal, plains[i].pos, tm, t)) {
+	// // 		tm = t;
+	// // 		num = i;
+	// // 		type = 2;
+	// // 	}
+	// // }
+	// // for (int i = 0; i < scene.sphere_count; i++) {
+	// // 	if(intersectSphere(ro,rd, spheres[i].pos, spheres[i].radius,tm,t)) 
+	// // 	{ 
+	// // 		tm = t; 
+	// // 		num = i;
+	// // 		type = 1;
+	// // 	}	
+	// // }
+	// //if (num == -1) retur
+	// bool res;
 
-	return res;
+	// res = type != 0;
+	// //if (type == 0) res = false;
+
+
+	// pt = ro + rd*tm;
+	// //if (type == 1) {
+	// 	normal = normalize(pt - spheres[num].xyz);
+	// 	mat = materials[num];
+	// 	col = vec3(1);
+	// //} 
+	// // if (type == 2) {
+	// // 	normal = plains[num].normal;
+	// // 	mat = plains[num].material;
+	// // } 
+
+	// return res;
 }
 
 bool inShadow(vec3 ro,vec3 rd,float d)
 {
 	bool ret = false;
 	float t;
-	if(intersectSphere(ro,rd,spheres[0].pos,spheres[0].radius,d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[1].pos,spheres[1].radius,d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[2].pos,spheres[2].radius,d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[3].pos,spheres[3].radius,d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[4].pos,spheres[4].radius,d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[5].pos,spheres[5].radius,d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[6].pos,spheres[6].radius,d,t)) {ret = true;}
+	
+	if(intersectSphere(ro,rd,spheres[1],d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[2],d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[3],d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[4],d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[5],d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[6],d,t)) {ret = true;}
+	if(intersectSphere(ro,rd,spheres[7],d,t)) {ret = true;}
 	// for (int i = 0; i < scene.sphere_count; ++i) {
 	// 	if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
 	// 		return true;
@@ -366,14 +403,14 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 	//if(diffuse > 0.0) //If its not a light
 	{
 		for (int i = 0; i < 1; i++) {
-			lcol = lights[i].color;
+			lcol = vec3(1);
 			// if (lights[i].type == LIGHT_AMBIENT) {
 			// 	pixelColor += lights[i].intensity * col * lcol;
 			// 	continue;
 			// }
 
 			//if (lights[i].type == LIGHT_POINT) {
-				l = lights[i].pos - pt;
+				l = spheres[i].xyz - pt;
 				dist = length(l);
 				//distDiv = dist;
 				distDiv = 1 + dist*dist; // 1 + dist * dist;
@@ -397,11 +434,11 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 				shadowMult = 0;
 			}
 			#endif
-			diffuse += shadowMult * lcol * col * dp * lights[i].intensity * albedo / distDiv;
+			diffuse += shadowMult * lcol * col * dp * albedo * 15 / distDiv;
 			
 			vec3 reflection = reflect(l, n);
 			float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
-			specular += shadowMult * lcol * pow(specDp, specPower) * dp * lights[i].intensity / distDiv;
+			specular += shadowMult * lcol * pow(specDp, specPower) * dp * 15 / distDiv;
 		}
 		pixelColor = diffuse * kd + specular * ks;
 	} //else return col;
@@ -444,13 +481,24 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
 vec3 getReflection(vec3 ro,vec3 rd)
 {
 	vec3 color = vec3(0);
-	vec3 ob,col,pt,n;
-    rt_material mat;
-	if(calcInter(ro,rd,ob,col,mat))
-	{
-		bool outside = dot(rd, n) < 0;
-		color = LightPixel2(outside ? pt + n * eps : pt - n * eps,rd,col,mat.diffuse,n,mat.specular, true, mat.kd, mat.ks);
-	}
+	vec3 col,pt,n;
+    vec2 mat;
+	vec4 ob;
+	// if(calcInter(ro,rd,ob,col,mat))
+	// {
+	// 	bool outside = dot(rd, n) < 0;
+	// 	color = LightPixel2(outside ? pt + n * eps : pt - n * eps,rd,col,0.7,outside?n:-n,30, true, 0.8, 0.2);
+	// }
+	// return color;
+
+	// float tm = calcInter(ro,rd,ob,col,mat);
+	// if(tm < maxDist)
+	// {
+	// 	vec3 pt = ro + rd*tm;
+	// 	vec3 n = normalize(pt - ob.xyz);
+	// 	bool outside = dot(rd, n) < 0;
+	// 	color = calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,n);
+	// }
 	return color;
 }
 
@@ -491,9 +539,10 @@ void main()
 	init();
 
 	float reflectMultiplier,refractMultiplier,tm;
-	vec3 ob,col;
-    rt_material mat;
+	vec3 col;
+    vec2 mat;
 	vec3 pt,refCol,n,refl;
+	vec4 ob;
 
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
@@ -503,24 +552,27 @@ void main()
 	
 	for(int i = 0; i < iterations; i++)
 	{
-		if(calcInter(ro,rd,pt,n,mat))
+		tm = calcInter(ro,rd,ob,col,mat);
+		if(tm < maxDist)
+		//if(calcInter(ro,rd,pt,col,n,mat))
 		{
-			col = mat.color;
+			pt = ro + rd*tm;
+			n = normalize(pt - ob.xyz);
 			bool outside = dot(rd, n) < 0;
 
 			#if TOTAL_INTERNAL_REFLECTION
 			//float reflIdx = mat.y > 0 ? mat.y : REFRACTIVE_INDEX_AIR;
-			if (mat.refract > 0) 
-				reflectMultiplier = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_AIR : mat.refract,
-													  	  outside ? mat.refract : REFRACTIVE_INDEX_AIR,
-											 		      rd, n, mat.reflect);
-			else reflectMultiplier = getFresnel(n,rd,mat.reflect);
+			if (mat.y > 0) 
+				reflectMultiplier = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_AIR : mat.y,
+													  	  outside ? mat.y : REFRACTIVE_INDEX_AIR,
+											 		      rd, n, mat.x);
+			else reflectMultiplier = getFresnel(n,rd,mat.x);
 			#else
-			reflectMultiplier = getFresnel(n,rd,mat.reflect);
+			reflectMultiplier = getFresnel(n,rd,mat.x);
 			#endif
 			refractMultiplier = 1 - reflectMultiplier;
 
-			if(mat.refract > 0.0) // Refractive
+			if(mat.y > 0.0) // Refractive
 			{
 				if (outside)
 				{
@@ -532,9 +584,11 @@ void main()
 					color += refCol * reflectMultiplier * mask;
 					mask *= refractMultiplier;
 				}
+				#define absorba vec3(5,4,3)
+				#define mat_diff 0.7
 				else {
 					absorbDistance += tm;    
-        			vec3 absorb = exp(-mat.absorb * absorbDistance);
+        			vec3 absorb = exp(-absorba * absorbDistance);
 					mask *= absorb;
 				}
 				#if TOTAL_INTERNAL_REFLECTION
@@ -544,31 +598,31 @@ void main()
 				#endif
 				ro = outside ? pt - n * eps : pt + n * eps;
 				#if CUSTOM_REFRACT
-				rd = refract_c(rd, n, mat.refract);
+				rd = refract_c(rd, n, mat.y);
 				#else
 				float refractCoeff = outside ? REFRACTIVE_INDEX_AIR / mat.y : mat.y / REFRACTIVE_INDEX_AIR;
 				rd = refract(rd, outside ? n : -n, refractCoeff);
 				#endif
 			}
 			else 
-			if(mat.reflect > 0.0) // Reflective
+			if(mat.x > 0.0) // Reflective
 			{
 				ro = outside ? pt + n * eps : pt - n * eps;
-				color += LightPixel2(ro, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
+				color += LightPixel2(ro, rd, col, 0.7, outside ? n : -n, 30, true, 0.8, 0.2)* refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
             {
-				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks) * mask;
+				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, 0.7, outside ? n : -n, 30, true, 0.8, 0.2) * mask;
                 break;
             }
 			
 		} 
-		else {
-			color += scene.bg_color * mask;
-			break;
-		}
+		// else {
+		// 	color += scene.bg_color * mask;
+		// 	break;
+		// }
 	}
 	#if DBG == 0
 	imageStore (img_output, pixel_coords, vec4(color,1));
