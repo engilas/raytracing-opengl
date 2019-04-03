@@ -31,8 +31,8 @@ struct rt_material {
 	vec3 absorb;
 
 	float diffuse;
-	float reflect;
-	float refract;
+	float x;
+	float y;
 	int specular;
 	float kd;
 	float ks;
@@ -142,8 +142,8 @@ const float eps = 0.001;
 #define sp_size 8
 
 vec4 spheres[sp_size];
-//vec4 colors[sp_size];
-vec2 materials[sp_size];
+vec4 colors[sp_size];
+rt_material materials[sp_size];
 
 
 // struct rt_sphere {
@@ -159,7 +159,7 @@ void init()
     // X Y Z Radius
     // spheres[0] = vec4(      0.8,       0,    -1.5,    0.1);
     // spheres[1] = vec4(      -0.8,    0.25,    -1.5,    0.1);
-	//rt_material mat = rt_material(vec3(1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
+	rt_material mat = rt_material(vec3(1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
 
 	spheres[0] = vec4(      0.8,       0,    -1.5, 1);
     spheres[1] = vec4(1, 0.25, 1.5, 0.3); //rt_sphere(vec3(1),vec3(1, 0.25, 1.5), vec2(0.1,0), 0.3);
@@ -170,14 +170,14 @@ void init()
 	spheres[6] = vec4(      0,       0, 1006.0 , 1000);//rt_sphere(vec3(1),vec3(      0,       0, 1006.0 ), vec2(0.1,0), 1000);
 	spheres[7] = vec4(      0,       0, -1006.0, 1000);//rt_sphere(vec3(1),vec3(      0,       0, -1006.0),vec2(0.1,0), 1000);
 
-	materials[0] = vec2 (0.1, 0.0);	
-    materials[1] = vec2 (0.1, 0.0);
-    materials[2] = vec2 (0.1, 0.0);				
-    materials[3] = vec2 (0.1, 0.0);				
-    materials[4] = vec2 (0.1, 0.0);				
-    materials[5] = vec2 (0.1, 0.0);				
-    materials[6] = vec2 (0.1, 0.0);
-	materials[7] = vec2 (0.1, 0.0);
+	materials[0] = mat;	
+    materials[1] = mat;
+    materials[2] = mat;				
+    materials[3] = mat;				
+    materials[4] = mat;				
+    materials[5] = mat;				
+    materials[6] = mat;
+	materials[7] = mat;
 	// spheres[2] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[3] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[4] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
@@ -293,12 +293,12 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 //     return false; 
 // }
 
-float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec3 col, out vec2 mat)
+float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat)
 {
-	// float tm = maxDist;
-	// float t;
+	float tm = maxDist;
+	float t;
 
-	// if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = vec3(1); tm = t; mat = materials[1]; }
+	// if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = vec3(1,0,0); tm = t; mat = materials[1]; }
 	// if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = vec3(1); tm = t; mat = materials[2]; }
 	// if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = vec3(1); tm = t; mat = materials[3]; }
 	// if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = vec3(1); tm = t; mat = materials[4]; }
@@ -309,30 +309,30 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec3 col, out vec2 mat)
 	// return tm;
 
 
-	float tm = maxDist;
-	float t;
-	//vec3 ob;
-	int type = 0; //1 - sphere, 2 - plain
+	// float tm = maxDist;
+	// float t;
+	// //vec3 ob;
+	// int type = 0; //1 - sphere, 2 - plain
 	int num;
-	//mat = materials[1];
-	//col = vec3(1);
-	//ob = spheres[1];
-	//if (intersectSphere(ro,rd, spheres[0],tm,t)) {tm = t; num = 0; type = 1;}
-	if (intersectSphere(ro,rd, spheres[1],tm,t)) {tm = t; num = 1; type = 1;}
-	if (intersectSphere(ro,rd, spheres[2],tm,t)) {tm = t; num = 2; type = 1;}
-	if (intersectSphere(ro,rd, spheres[3],tm,t)) {tm = t; num = 3; type = 1;}
-	if (intersectSphere(ro,rd, spheres[4],tm,t)) {tm = t; num = 4; type = 1;}
-	if (intersectSphere(ro,rd, spheres[5],tm,t)) {tm = t; num = 5; type = 1;}
-	if (intersectSphere(ro,rd, spheres[6],tm,t)) {tm = t; num = 6; type = 1;}
-	if (intersectSphere(ro,rd, spheres[7],tm,t)) {tm = t; num = 7; type = 1;}
+	// //mat = materials[1];
+	// //col = vec3(1);
+	// //ob = spheres[1];
+	// //if (intersectSphere(ro,rd, spheres[0],tm,t)) {tm = t; num = 0; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[1],tm,t)) {tm = t; num = 1; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[2],tm,t)) {tm = t; num = 2; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[3],tm,t)) {tm = t; num = 3; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[4],tm,t)) {tm = t; num = 4; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[5],tm,t)) {tm = t; num = 5; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[6],tm,t)) {tm = t; num = 6; type = 1;}
+	// if (intersectSphere(ro,rd, spheres[7],tm,t)) {tm = t; num = 7; type = 1;}
 
-	// if (intersectSphere(ro,rd, spheres[1],tm,t)) {num = 1; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
-	// if (intersectSphere(ro,rd, spheres[2],tm,t)) {num = 2; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
-	// if (intersectSphere(ro,rd, spheres[3],tm,t)) {num = 3; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
-	// if (intersectSphere(ro,rd, spheres[4],tm,t)) {num = 4; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
-	// if (intersectSphere(ro,rd, spheres[5],tm,t)) {num = 5; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
-	// if (intersectSphere(ro,rd, spheres[6],tm,t)) {num = 6; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
-	// if (intersectSphere(ro,rd, spheres[7],tm,t)) {num = 7; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[1],tm,t)) {num = 1; tm = t; mat = materials[num]; ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[2],tm,t)) {num = 2; tm = t; mat = materials[num]; ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[3],tm,t)) {num = 3; tm = t; mat = materials[num]; ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[4],tm,t)) {num = 4; tm = t; mat = materials[num]; ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[5],tm,t)) {num = 5; tm = t; mat = materials[num]; ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[6],tm,t)) {num = 6; tm = t; mat = materials[num]; ob = spheres[num];}
+	if (intersectSphere(ro,rd, spheres[7],tm,t)) {num = 7; tm = t; mat = materials[num]; ob = spheres[num];}
 
 	// // for (int i = 0; i < scene.plain_count; i++) { 
 	// // 	if (intersectPlain(ro, rd, plains[i].normal, plains[i].pos, tm, t)) {
@@ -359,9 +359,9 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec3 col, out vec2 mat)
 	//vec3 pt = ro + rd*tm;
 	// if (type == 1) {
 	// 	//vec3 normal = normalize(pt - spheres[num].xyz);
-		mat = materials[num];
-		col = vec3(1);
-		ob = spheres[num];
+		// mat = materials[num];
+		// col = vec3(1);
+		// ob = spheres[num];
 	// } 
 	// if (type == 2) {
 	// 	normal = plains[num].normal;
@@ -448,7 +448,7 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 				shadowMult = 0;
 			}
 			#endif
-			diffuse += shadowMult * lcol * col * dp * albedo * 15 / distDiv;
+			diffuse += shadowMult * lcol * col * dp * albedo * 35 / distDiv;
 			
 			vec3 reflection = reflect(l, n);
 			float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
@@ -554,7 +554,7 @@ void main()
 
 	float reflectMultiplier,refractMultiplier,tm;
 	vec3 col;
-    vec2 mat;
+    rt_material mat;
 	vec3 pt,refCol,n,refl;
 	vec4 ob;
 
@@ -566,7 +566,8 @@ void main()
 	
 	for(int i = 0; i < iterations; i++)
 	{
-		tm = calcInter(ro,rd,ob,col,mat);
+		tm = calcInter(ro,rd,ob,mat);
+		col = mat.color;
 		if(tm < maxDist)
 		//if(calcInter(ro,rd,pt,col,n,mat))
 		{
@@ -622,13 +623,13 @@ void main()
 			if(mat.x > 0.0) // Reflective
 			{
 				ro = outside ? pt + n * eps : pt - n * eps;
-				color += LightPixel2(ro, rd, col, 0.7, outside ? n : -n, 30, true, 0.8, 0.2)* refractMultiplier * mask;
+				color += LightPixel2(ro, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
             {
-				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, 0.7, outside ? n : -n, 30, true, 0.8, 0.2) * mask;
+				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks) * mask;
                 break;
             }
 			
