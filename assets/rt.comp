@@ -295,33 +295,45 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 
 float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec3 col, out vec2 mat)
 {
-	float tm = maxDist;
-	float t;
-
-	if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = vec3(1); tm = t; mat = materials[1]; }
-	if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = vec3(1); tm = t; mat = materials[2]; }
-	if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = vec3(1); tm = t; mat = materials[3]; }
-	if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = vec3(1); tm = t; mat = materials[4]; }
-	if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = vec3(1); tm = t; mat = materials[5]; }
-	if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = vec3(1); tm = t; mat = materials[6]; }
-    if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = vec3(1); tm = t; mat = materials[7]; }
-
-	return tm;
-
-
 	// float tm = maxDist;
 	// float t;
-	// vec3 ob;
-	// int type = 0; //1 - sphere, 2 - plain
-	// int num;
-	// //if (intersectSphere(ro,rd, spheres[0],tm,t)) {tm = t; num = 0; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[1],tm,t)) {tm = t; num = 1; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[2],tm,t)) {tm = t; num = 2; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[3],tm,t)) {tm = t; num = 3; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[4],tm,t)) {tm = t; num = 4; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[5],tm,t)) {tm = t; num = 5; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[6],tm,t)) {tm = t; num = 6; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[7],tm,t)) {tm = t; num = 7; type = 1;}
+
+	// if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = vec3(1); tm = t; mat = materials[1]; }
+	// if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = vec3(1); tm = t; mat = materials[2]; }
+	// if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = vec3(1); tm = t; mat = materials[3]; }
+	// if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = vec3(1); tm = t; mat = materials[4]; }
+	// if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = vec3(1); tm = t; mat = materials[5]; }
+	// if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = vec3(1); tm = t; mat = materials[6]; }
+    // if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = vec3(1); tm = t; mat = materials[7]; }
+
+	// return tm;
+
+
+	float tm = maxDist;
+	float t;
+	//vec3 ob;
+	int type = 0; //1 - sphere, 2 - plain
+	int num;
+	//mat = materials[1];
+	//col = vec3(1);
+	//ob = spheres[1];
+	//if (intersectSphere(ro,rd, spheres[0],tm,t)) {tm = t; num = 0; type = 1;}
+	if (intersectSphere(ro,rd, spheres[1],tm,t)) {tm = t; num = 1; type = 1;}
+	if (intersectSphere(ro,rd, spheres[2],tm,t)) {tm = t; num = 2; type = 1;}
+	if (intersectSphere(ro,rd, spheres[3],tm,t)) {tm = t; num = 3; type = 1;}
+	if (intersectSphere(ro,rd, spheres[4],tm,t)) {tm = t; num = 4; type = 1;}
+	if (intersectSphere(ro,rd, spheres[5],tm,t)) {tm = t; num = 5; type = 1;}
+	if (intersectSphere(ro,rd, spheres[6],tm,t)) {tm = t; num = 6; type = 1;}
+	if (intersectSphere(ro,rd, spheres[7],tm,t)) {tm = t; num = 7; type = 1;}
+
+	// if (intersectSphere(ro,rd, spheres[1],tm,t)) {num = 1; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	// if (intersectSphere(ro,rd, spheres[2],tm,t)) {num = 2; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	// if (intersectSphere(ro,rd, spheres[3],tm,t)) {num = 3; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	// if (intersectSphere(ro,rd, spheres[4],tm,t)) {num = 4; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	// if (intersectSphere(ro,rd, spheres[5],tm,t)) {num = 5; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	// if (intersectSphere(ro,rd, spheres[6],tm,t)) {num = 6; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+	// if (intersectSphere(ro,rd, spheres[7],tm,t)) {num = 7; tm = t; mat = materials[num]; col = vec3(1); ob = spheres[num];}
+
 	// // for (int i = 0; i < scene.plain_count; i++) { 
 	// // 	if (intersectPlain(ro, rd, plains[i].normal, plains[i].pos, tm, t)) {
 	// // 		tm = t;
@@ -338,24 +350,26 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out vec3 col, out vec2 mat)
 	// // 	}	
 	// // }
 	// //if (num == -1) retur
-	// bool res;
+	//bool res;
 
-	// res = type != 0;
-	// //if (type == 0) res = false;
+	//res = type != 0;
+	//if (type == 0) res = false;
 
 
-	// pt = ro + rd*tm;
-	// //if (type == 1) {
-	// 	normal = normalize(pt - spheres[num].xyz);
-	// 	mat = materials[num];
-	// 	col = vec3(1);
-	// //} 
-	// // if (type == 2) {
-	// // 	normal = plains[num].normal;
-	// // 	mat = plains[num].material;
-	// // } 
+	//vec3 pt = ro + rd*tm;
+	// if (type == 1) {
+	// 	//vec3 normal = normalize(pt - spheres[num].xyz);
+		mat = materials[num];
+		col = vec3(1);
+		ob = spheres[num];
+	// } 
+	// if (type == 2) {
+	// 	normal = plains[num].normal;
+	// 	mat = plains[num].material;
+	// } 
 
-	// return res;
+	//return res;
+	return tm;
 }
 
 bool inShadow(vec3 ro,vec3 rd,float d)
