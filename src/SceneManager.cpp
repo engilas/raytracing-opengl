@@ -303,54 +303,54 @@ void SceneManager::initBuffers()
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size(), plains.size());
 
 	glGenBuffers(1, &sceneSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sceneSsbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_scene), NULL, GL_STATIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sceneSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	glBindBuffer(GL_UNIFORM_BUFFER, sceneSsbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_scene), NULL, GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, sceneSsbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	glGenBuffers(1, &sphereSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sphereSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-    glGenBuffers(1, &plainSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, plainSsbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_plain) * plains.size(), plains.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, plainSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-	glGenBuffers(1, &lightSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSsbo);
-	glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_light) * lights.size(), lights.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, lightSsbo);
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+	// glGenBuffers(1, &sphereSsbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
+	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
+	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sphereSsbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+ //
+ //    glGenBuffers(1, &plainSsbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, plainSsbo);
+	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_plain) * plains.size(), plains.data(), GL_STATIC_DRAW);
+	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, plainSsbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+ //
+	// glGenBuffers(1, &lightSsbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSsbo);
+	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_light) * lights.size(), lights.data(), GL_STATIC_DRAW);
+	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, lightSsbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void SceneManager::updateBuffers() const
 {
-	glUniform1i(glGetUniformLocation(wrapper->computeHandle, "sphere_count"), 8);
+	//glUniform1i(glGetUniformLocation(wrapper->computeHandle, "sphere_count"), 8);
 
-	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sceneSsbo);
-	GLvoid* scene_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+	glBindBuffer(GL_UNIFORM_BUFFER, sceneSsbo);
+	GLvoid* scene_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	memcpy(scene_p, &scene, sizeof(rt_scene));
-	glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
-    if (!spheres.empty())
-    {
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
-	    GLvoid* spheres_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-	    memcpy(spheres_p, spheres.data(), sizeof(rt_sphere) * spheres.size());
-	    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    }
-
-    if (!plains.empty())
-    {
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, plainSsbo);
-	    GLvoid* plains_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-	    memcpy(plains_p, plains.data(), sizeof(rt_plain) * plains.size());
-	    glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    }
+    // if (!spheres.empty())
+    // {
+    //     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
+	   //  GLvoid* spheres_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+	   //  memcpy(spheres_p, spheres.data(), sizeof(rt_sphere) * spheres.size());
+	   //  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    // }
+    //
+    // if (!plains.empty())
+    // {
+    //     glBindBuffer(GL_SHADER_STORAGE_BUFFER, plainSsbo);
+	   //  GLvoid* plains_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+	   //  memcpy(plains_p, plains.data(), sizeof(rt_plain) * plains.size());
+	   //  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
+    // }
 }
 
 vec3 SceneManager::getColor(float r, float g, float b)

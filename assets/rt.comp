@@ -62,44 +62,45 @@ struct rt_light {
 };
 
 struct rt_scene {
-	vec4 quat_camera_rotation;
-	vec3 camera_pos;
-	vec3 bg_color;
+	vec4 quat_camera_rotation;//uniform
+	vec3 camera_pos;//uniform
+	vec3 bg_color;//uniform
 
-	int canvas_width;
-	int canvas_height;
-	float viewport_width;
-	float viewport_height;
+	int canvas_width;// uniform
+	int canvas_height;// uniform
 
-	float viewport_dist;
-	int reflect_depth;
-	int sphere_count;
-	int light_count;
-	int plain_count;
+	float viewport_width;//remove
+	float viewport_height;//remove
+	float viewport_dist;//remove
+
+	int reflect_depth;//define
+	int sphere_count;//define
+	int light_count;//define
+	int plain_count;//define
 };
 
 layout (local_size_x = 16, local_size_y = 16) in;
 layout (rgba32f, binding = 0) uniform image2D img_output;
 
-layout( std430, binding=1 ) readonly buffer scene_buf
+layout( std140, binding=1 ) readonly uniform scene_buf
 {
     rt_scene scene;
 };
 
-layout( std430, binding=2 ) readonly buffer spheres_buf
-{
-    rt_sphere spheress[ ];
-};
+// layout( std430, binding=2 ) readonly buffer spheres_buf
+// {
+//     rt_sphere spheress[ ];
+// };
 
-layout( std430, binding=3 ) readonly buffer plains_buf
-{
-    rt_plain plains[ ];
-};
+// layout( std430, binding=3 ) readonly buffer plains_buf
+// {
+//     rt_plain plains[ ];
+// };
 
-layout( std430, binding=4 ) readonly buffer lights_buf
-{
-    rt_light lightss[ ];
-};
+// layout( std430, binding=4 ) readonly buffer lights_buf
+// {
+//     rt_light lightss[ ];
+// };
 
 //uniform readonly int sphere_count;
 
