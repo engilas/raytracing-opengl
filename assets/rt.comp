@@ -1,5 +1,4 @@
 #version 430
-
 #define MAX_RECURSION_DEPTH 5
 
 #define T_MIN 0.001f
@@ -100,6 +99,12 @@ layout( std430, binding=3 ) readonly buffer plains_buf
 layout( std430, binding=4 ) readonly buffer lights_buf
 {
     rt_light lightss[ ];
+};
+
+//uniform readonly int sphere_count;
+
+layout(binding=5) readonly uniform UBO {
+	int sphere_count;
 };
 
 #if DBG

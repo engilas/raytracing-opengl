@@ -22,11 +22,11 @@ public:
 	GLFWwindow* window;
 
     void draw();
-	
+
+	GLuint computeHandle;
 
 private:
     GLuint renderHandle;
-    GLuint computeHandle;
     GLuint texHandle;
 
 	int width;

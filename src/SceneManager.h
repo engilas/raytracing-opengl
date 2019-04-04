@@ -1,3 +1,6 @@
+#pragma once
+
+#include "GLWrapper.h"
 #include "scene.h"
 #include <vector>
 #include <glad/glad.h>
@@ -7,7 +10,7 @@
 class SceneManager 
 {
 public:
-	SceneManager(int wind_width, int wind_height, GLFWwindow * window);
+	SceneManager(int wind_width, int wind_height, GLWrapper* wrapper);
 	rt_scene& getScene();
 
 	void init();
@@ -22,7 +25,7 @@ private:
 
 	int wind_width;
 	int wind_height;
-	GLFWwindow * window;
+	GLWrapper* wrapper;
 
 	bool w_pressed = false;
 	bool a_pressed = false;

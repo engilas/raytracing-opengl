@@ -22,7 +22,7 @@ int main()
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();
 
-	SceneManager scene_manager(wind_width, wind_height, glWrapper.window);
+	SceneManager scene_manager(wind_width, wind_height, &glWrapper);
 	scene_manager.init();
 
 	glfwSwapInterval(0);
@@ -33,10 +33,13 @@ int main()
 
     while (!glfwWindowShouldClose(glWrapper.window))
     {
+		
         ++frames_count;
         auto newTime = std::chrono::steady_clock::now();
 		std::chrono::duration<double> frameTime = (newTime - currentTime);
 		currentTime = newTime;
+
+		glUseProgram(glWrapper.computeHandle);
 
 		scene_manager.update(frameTime.count());
         glWrapper.draw();

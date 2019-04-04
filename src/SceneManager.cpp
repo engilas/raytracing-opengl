@@ -4,11 +4,11 @@
 
 #define PI_F 3.14159265358979f
 
-SceneManager::SceneManager(int wind_width, int wind_height, GLFWwindow* window)
+SceneManager::SceneManager(int wind_width, int wind_height, GLWrapper* wrapper)
 {
 	this->wind_width = wind_width;
 	this->wind_height = wind_height;
-	this->window = window;
+	this->wrapper = wrapper;
 }
 
 rt_scene& SceneManager::getScene()
@@ -18,7 +18,7 @@ rt_scene& SceneManager::getScene()
 
 void SceneManager::init()
 {
-	glfwSetWindowUserPointer(window, this);
+	glfwSetWindowUserPointer(wrapper->window, this);
 
 	auto mouseFunc = [](GLFWwindow* w, double x, double y)
 	{
@@ -29,10 +29,10 @@ void SceneManager::init()
 		static_cast<SceneManager*>(glfwGetWindowUserPointer(w))->glfw_key_callback(w, a, b, c, d);
 	};
 
-	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-	glfwSetCursorPosCallback(window, mouseFunc);
-	glfwSetKeyCallback(window, keyFunc);
-	glfwSetFramebufferSizeCallback(window, glfw_framebuffer_size_callback);
+	glfwSetInputMode(wrapper->window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPosCallback(wrapper->window, mouseFunc);
+	glfwSetKeyCallback(wrapper->window, keyFunc);
+	glfwSetFramebufferSizeCallback(wrapper->window, glfw_framebuffer_size_callback);
 
 	initBuffers();
 }
@@ -329,6 +329,8 @@ void SceneManager::initBuffers()
 
 void SceneManager::updateBuffers() const
 {
+	glUniform1i(glGetUniformLocation(wrapper->computeHandle, "sphere_count"), 8);
+
 	glBindBuffer(GL_SHADER_STORAGE_BUFFER, sceneSsbo);
 	GLvoid* scene_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 	memcpy(scene_p, &scene, sizeof(rt_scene));

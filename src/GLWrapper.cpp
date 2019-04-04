@@ -90,7 +90,6 @@ inline unsigned divup(unsigned a, unsigned b)
 
 void GLWrapper::draw()
 {
-	glUseProgram(computeHandle);
 	glDispatchCompute(divup(width, 16), divup(height, 16), 1);
 	checkErrors("Dispatch compute shader");
 
