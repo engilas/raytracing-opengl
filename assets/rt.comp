@@ -297,83 +297,9 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat, out int type
 {
 	float tm = maxDist;
 	float t;
-
-	// if(intersectSphere(ro,rd,spheres[1],tm,t)) { ob = spheres[1]; col = vec3(1,0,0); tm = t; mat = materials[1]; }
-	// if(intersectSphere(ro,rd,spheres[2],tm,t)) { ob = spheres[2]; col = vec3(1); tm = t; mat = materials[2]; }
-	// if(intersectSphere(ro,rd,spheres[3],tm,t)) { ob = spheres[3]; col = vec3(1); tm = t; mat = materials[3]; }
-	// if(intersectSphere(ro,rd,spheres[4],tm,t)) { ob = spheres[4]; col = vec3(1); tm = t; mat = materials[4]; }
-	// if(intersectSphere(ro,rd,spheres[5],tm,t)) { ob = spheres[5]; col = vec3(1); tm = t; mat = materials[5]; }
-	// if(intersectSphere(ro,rd,spheres[6],tm,t)) { ob = spheres[6]; col = vec3(1); tm = t; mat = materials[6]; }
-    // if(intersectSphere(ro,rd,spheres[7],tm,t)) { ob = spheres[7]; col = vec3(1); tm = t; mat = materials[7]; }
-
-	// return tm;
-
-
-	// float tm = maxDist;
-	// float t;
-	// //vec3 ob;
-	// int type = 0; //1 - sphere, 2 - plain
 	int num = -1;
-	//vec3 ob;
-	// //mat = materials[1];
-	// //col = vec3(1);
-	// //ob = spheres[1];
-	// //if (intersectSphere(ro,rd, spheres[0],tm,t)) {tm = t; num = 0; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[1],tm,t)) {tm = t; num = 1; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[2],tm,t)) {tm = t; num = 2; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[3],tm,t)) {tm = t; num = 3; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[4],tm,t)) {tm = t; num = 4; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[5],tm,t)) {tm = t; num = 5; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[6],tm,t)) {tm = t; num = 6; type = 1;}
-	// if (intersectSphere(ro,rd, spheres[7],tm,t)) {tm = t; num = 7; type = 1;}
-
-	if (intersectSphere(ro,rd, spheres[1],tm,t)) {num = 1; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	if (intersectSphere(ro,rd, spheres[2],tm,t)) {num = 2; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	if (intersectSphere(ro,rd, spheres[3],tm,t)) {num = 3; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	if (intersectSphere(ro,rd, spheres[4],tm,t)) {num = 4; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	if (intersectSphere(ro,rd, spheres[5],tm,t)) {num = 5; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	if (intersectSphere(ro,rd, spheres[6],tm,t)) {num = 6; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	if (intersectSphere(ro,rd, spheres[7],tm,t)) {num = 7; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-
-	// if (num != -1) {
-	// 	pt = ro + rd*tm;
-	// 	n = normalize( pt - spheres[num].xyz);
-	// }
-	// // for (int i = 0; i < scene.plain_count; i++) { 
-	// // 	if (intersectPlain(ro, rd, plains[i].normal, plains[i].pos, tm, t)) {
-	// // 		tm = t;
-	// // 		num = i;
-	// // 		type = 2;
-	// // 	}
-	// // }
-	// // for (int i = 0; i < scene.sphere_count; i++) {
-	// // 	if(intersectSphere(ro,rd, spheres[i].pos, spheres[i].radius,tm,t)) 
-	// // 	{ 
-	// // 		tm = t; 
-	// // 		num = i;
-	// // 		type = 1;
-	// // 	}	
-	// // }
-	// //if (num == -1) retur
-	//bool res;
-
-	//res = type != 0;
-	//if (type == 0) res = false;
-
-
-	//vec3 pt = ro + rd*tm;
-	// if (type == 1) {
-	// 	//vec3 normal = normalize(pt - spheres[num].xyz);
-		// mat = materials[num];
-		// col = vec3(1);
-		// ob = spheres[num];
-	// } 
-	// if (type == 2) {
-	// 	normal = plains[num].normal;
-	// 	mat = plains[num].material;
-	// } 
-
-	//return res;
+	for (int i = 1; i < sp_size; ++i)
+		if (intersectSphere(ro,rd, spheres[i],tm,t)) {num = i; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
 	return tm;
 }
 
@@ -382,29 +308,8 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	bool ret = false;
 	float t;
 	
-	if(intersectSphere(ro,rd,spheres[1],d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[2],d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[3],d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[4],d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[5],d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[6],d,t)) {ret = true;}
-	if(intersectSphere(ro,rd,spheres[7],d,t)) {ret = true;}
-	// for (int i = 0; i < scene.sphere_count; ++i) {
-	// 	if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
-	// 		return true;
-	// 	} 
-	// }
-
-	// for (int i = 0; i < scene.sphere_count; i++) {
-	// 	if(intersectSphere(ro,rd,spheres[i].pos,spheres[i].radius,d,t)) {
-	// 		ret = true;
-	// 	} 
-	// }
-	// for (int i = 0; i < scene.plain_count; i++) {
-	// 	if (intersectPlain(ro, rd, plains[i].normal, plains[i].pos,d,t)) {
-	// 		return true;
-	// 	} 
-	// }
+	for (int i = 1; i < sp_size; ++i)
+		if(intersectSphere(ro,rd,spheres[i],d,t)) {ret = true;}
 	return ret;
 }
 
@@ -440,24 +345,21 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 			// }
 			l = normalize(l);
 			
-			float shadowMult = 1;
 			// diffuse
 			float dp = clamp(dot(n, l), 0.0, 1.0);
+			lcol *= dp;
 			#if SHADOW_ENABLED
-			if (doShadow
-			 && (dp <= 0 || inShadow(pt, l, dist))
-			 ) {
-				//if (dp <= 0) continue;
-				//if (inShadow(pt, l, dist)) continue;
-				//continue;
-				shadowMult = 0;
-			}
+			if (doShadow) 
+				lcol *= inShadow(pt, l, dist) ? 0 : 1;
 			#endif
-			diffuse += shadowMult * lcol * col * dp * albedo * 35 / distDiv;
+			diffuse += lcol * col * albedo * 35 / distDiv;
 			
-			vec3 reflection = reflect(l, n);
-			float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
-			specular += shadowMult * lcol * pow(specDp, specPower) * dp * 15 / distDiv;
+			//specular
+			if (specPower > 0) {
+				vec3 reflection = reflect(l, n);
+				float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
+				specular += lcol * pow(specDp, specPower) * 15 / distDiv;
+			}
 		}
 		pixelColor = diffuse * kd + specular * ks;
 	} //else return col;
