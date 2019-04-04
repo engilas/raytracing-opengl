@@ -79,10 +79,10 @@ struct rt_scene {
 	int plain_count;//define
 };
 
-layout (local_size_x = 16, local_size_y = 16) in;
+//layout (local_size_x = 16, local_size_y = 16) in;
 layout (rgba32f, binding = 0) uniform image2D img_output;
 
-layout( std140, binding=1 ) readonly uniform scene_buf
+layout( std140, binding=1 ) uniform scene_buf
 {
     rt_scene scene;
 };
@@ -104,7 +104,7 @@ layout( std140, binding=1 ) readonly uniform scene_buf
 
 //uniform readonly int sphere_count;
 
-layout(binding=5) readonly uniform UBO {
+layout(binding=5) uniform UBO {
 	int sphere_count;
 };
 
@@ -116,7 +116,7 @@ void _dbg()
 {
 	#if DBG
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    imageStore (img_output, pixel_coords, vec4(1,0,0,0));
+    gl_FragColor =vec4(1,0,0,0);
 	dbgEd = true;
 	#endif
 }
@@ -126,7 +126,7 @@ void _dbg(float value)
 	#if DBG
 	value = clamp(value, 0, 1);
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    imageStore (img_output, pixel_coords, vec4(value,value,value,0));
+    gl_FragColor = vec4(value,value,value,0);
 	dbgEd = true;
 	#endif
 }
@@ -135,7 +135,7 @@ void _dbg(vec3 value)
 {
 	#if DBG
 	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    imageStore (img_output, pixel_coords, vec4(clamp(value, vec3(0), vec3(1)),0));
+    gl_FragColor = vec4(clamp(value, vec3(0), vec3(1)),0);
 	dbgEd = true;
 	#endif
 }
@@ -458,7 +458,7 @@ vec3 getNormal(int type, vec4 ob, vec3 pt) {
 
 void main()
 {
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
+	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
 	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height){
 		return;
 	}
@@ -562,8 +562,8 @@ void main()
 		// }
 	}
 	#if DBG == 0
-	imageStore (img_output, pixel_coords, vec4(color,1));
+	gl_FragColor = vec4(color,1);
 	#else
-	if (!dbgEd) imageStore (img_output, pixel_coords, vec4(0));
+	if (!dbgEd) gl_FragColor = vec4(0);
 	#endif
 }

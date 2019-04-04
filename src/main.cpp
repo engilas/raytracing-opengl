@@ -39,7 +39,7 @@ int main()
 		std::chrono::duration<double> frameTime = (newTime - currentTime);
 		currentTime = newTime;
 
-		glUseProgram(glWrapper.computeHandle);
+		//glUseProgram(glWrapper.renderHandle);
 
 		scene_manager.update(frameTime.count());
         glWrapper.draw();

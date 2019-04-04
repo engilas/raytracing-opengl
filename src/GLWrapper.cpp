@@ -70,9 +70,9 @@ bool GLWrapper::init()
 	}
 	printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
 
-    texHandle = genTexture(width, height);
-	renderHandle = genRenderProg();
-	computeHandle = genComputeProg();
+    //texHandle = genTexture(width, height);
+	//renderHandle = genRenderProg();
+	renderHandle = genComputeProg();
 
 	return true;
 }
@@ -88,15 +88,37 @@ inline unsigned divup(unsigned a, unsigned b)
 	return (a + b - 1) / b;
 }
 
+GLvoid drawRectangle(GLfloat *v1, GLfloat *v2, GLfloat *v3, GLfloat *v4, GLfloat *col1, GLfloat *col2, GLfloat *col3, GLfloat *col4)
+{
+	// glBegin(GL_POYGON);
+	// glColor4fv(col1);
+	// glVertex4fv(v1);
+	// glColor4fv(col2);
+	// glVertex4fv(v2);
+	// glColor4fv(col3);
+	// glVertex4fv(v3);
+	// glColor4fv(col4);
+	// glVertex4fv(v4);
+	// glEnd();
+}
+
 void GLWrapper::draw()
 {
-	glDispatchCompute(divup(width, 16), divup(height, 16), 1);
-	checkErrors("Dispatch compute shader");
+	//glDispatchCompute(divup(width, 16), divup(height, 16), 1);
+	//checkErrors("Dispatch compute shader");
 
 	//glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-    glUseProgram(renderHandle);
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	glClearColor(0.0, 0.0, 0.0, 1.0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	//glRecti(-1, -1, 1, 1); /* fragment shader is not run unless there's vertices in OpenGL 2? */
+
+	//glVertexAttrib1f(0, 0);
+	//glDrawArrays(GL_POINT, 0, 1);
+	//glDrawArrays(GL_POINT, )
+	//glBindVertexArray()
+    //glUseProgram(computeHandle);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
 	checkErrors("Draw screen");
 }
 
@@ -166,6 +188,25 @@ GLuint GLWrapper::genTexture(int width, int height)
 	return texHandle;
 }
 
+static char* load_file(const char *fname, GLint &fSize)
+{
+	std::ifstream file(fname, std::ios::in | std::ios::binary | std::ios::ate);
+	if (file.is_open())
+	{
+		unsigned int size = (unsigned int)file.tellg();
+		fSize = size;
+		char *memblock = new char[size];
+		file.seekg(0, std::ios::beg);
+		file.read(memblock, size);
+		file.close();
+		std::cout << "file " << fname << " loaded" << std::endl;
+		return memblock;
+	}
+
+	std::cout << "Unable to open file " << fname << std::endl;
+	return NULL;
+}
+
 GLuint GLWrapper::genRenderProg()
 {
     GLuint progHandle = glCreateProgram();
@@ -174,26 +215,31 @@ GLuint GLWrapper::genRenderProg()
 
 	const char *vpSrc[] = {
 		"#version 430\n",
-		"in vec2 pos;\
-		 out vec2 texCoord;\
-		 void main() {\
-			 texCoord = pos*0.5f + 0.5f;\
-			 gl_Position = vec4(pos.x, pos.y, 0.0, 1.0);\
-		 }"
+		"layout(location = 0) out vec2 uv;\
+		void main()\
+		{\
+			float x = float(((uint(gl_VertexID) + 2u) / 3u) % 2u);\
+			float y = float(((uint(gl_VertexID) + 1u) / 3u) % 2u);\
+			gl_Position = vec4(-1.0f + x * 2.0f, -1.0f + y * 2.0f, 0.0f, 1.0f);\
+			uv = vec2(x, y);\
+		}"
 	};
 
-	const char *fpSrc[] = {
-		"#version 430\n",
-		"uniform sampler2D srcTex;\
-		 in vec2 texCoord;\
-		 out vec4 color;\
-		 void main() {\
-			 color = texture2D(srcTex,texCoord);\
-		 }"
-	};
+	GLint source_len;
+	auto fpSrc = load_file(ASSETS_DIR "/rt.comp", source_len);
+
+	// const char *fpSrc[] = {
+	// 	"#version 430\n",
+	// 	"uniform sampler2D srcTex;\
+	// 	 in vec2 texCoord;\
+	// 	 out vec4 color;\
+	// 	 void main() {\
+	// 		 color = texture2D(srcTex,texCoord);\
+	// 	 }"
+	// };
 
 	glShaderSource(vp, 2, vpSrc, NULL);
-	glShaderSource(fp, 2, fpSrc, NULL);
+	glShaderSource(fp, 2, &fpSrc, NULL);
 
 	glCompileShader(vp);
 	int rvalue;
@@ -224,52 +270,33 @@ GLuint GLWrapper::genRenderProg()
 	glUseProgram(progHandle);
 	glUniform1i(glGetUniformLocation(progHandle, "srcTex"), 0);
 
-	GLuint vertArray;
-	glGenVertexArrays(1, &vertArray);
-	glBindVertexArray(vertArray);
+	// GLuint vertArray;
+	// glGenVertexArrays(1, &vertArray);
+	// glBindVertexArray(vertArray);
 
-	GLuint posBuf;
-	glGenBuffers(1, &posBuf);
-	glBindBuffer(GL_ARRAY_BUFFER, posBuf);
-	float data[] = {
-		-1.0f, -1.0f,
-		-1.0f, 1.0f,
-		1.0f, -1.0f,
-		1.0f, 1.0f
-	};
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, data, GL_STREAM_DRAW);
-	GLint posPtr = glGetAttribLocation(progHandle, "pos");
-	glVertexAttribPointer(posPtr, 2, GL_FLOAT, GL_FALSE, 0, 0);
-	glEnableVertexAttribArray(posPtr);
+	// GLuint posBuf;
+	// glGenBuffers(1, &posBuf);
+	// glBindBuffer(GL_ARRAY_BUFFER, posBuf);
+	// float data[] = {
+	// 	-1.0f, -1.0f,
+	// 	-1.0f, 1.0f,
+	// 	1.0f, -1.0f,
+	// 	1.0f, 1.0f
+	// };
+	// glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, data, GL_STREAM_DRAW);
+	// GLint posPtr = glGetAttribLocation(progHandle, "pos");
+	glVertexAttribPointer(0, 0, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(0);
 
 	checkErrors("Render shaders");
 	return progHandle;
-}
-
-static char* load_file(const char *fname, GLint &fSize)
-{
-	std::ifstream file(fname, std::ios::in | std::ios::binary | std::ios::ate);
-	if (file.is_open())
-	{
-		unsigned int size = (unsigned int)file.tellg();
-		fSize = size;
-		char *memblock = new char[size];
-		file.seekg(0, std::ios::beg);
-		file.read(memblock, size);
-		file.close();
-		std::cout << "file " << fname << " loaded" << std::endl;
-		return memblock;
-	}
-
-	std::cout << "Unable to open file " << fname << std::endl;
-	return NULL;
 }
 
 GLuint GLWrapper::genComputeProg()
 {
     // Creating the compute shader, and the program object containing the shader
 	GLuint progHandle = glCreateProgram();
-	GLuint cs = glCreateShader(GL_COMPUTE_SHADER);
+	GLuint cs = glCreateShader(GL_FRAGMENT_SHADER);
 
 	char *source;
 	GLint source_len;
@@ -301,7 +328,6 @@ GLuint GLWrapper::genComputeProg()
 	}
 	glUseProgram(progHandle);
 
-	glUniform1i(glGetUniformLocation(progHandle, "img_output"), 0);
 
 	checkErrors("Compute shader");
 

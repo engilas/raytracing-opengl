@@ -23,11 +23,11 @@ public:
 
     void draw();
 
-	GLuint computeHandle;
+	//GLuint computeHandle;
+	GLuint renderHandle;
 
 private:
-    GLuint renderHandle;
-    GLuint texHandle;
+    //GLuint texHandle;
 
 	int width;
 	int height;
