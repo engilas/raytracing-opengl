@@ -132,7 +132,7 @@ GLuint GLWrapper::genRenderProg()
 	};
 
 	GLint source_len;
-	auto fpSrc = load_file(ASSETS_DIR "/rt.comp", source_len);
+	auto fpSrc = load_file(ASSETS_DIR "/rt.frag", source_len);
 
 	glShaderSource(vp, 2, vpSrc, NULL);
 	glShaderSource(fp, 1, &fpSrc, &source_len);
