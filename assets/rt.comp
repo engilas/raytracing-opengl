@@ -38,9 +38,10 @@ struct rt_material {
 };
 
 struct rt_sphere {
-	vec3 color;
+	rt_material mat;
+	//vec3 color;
 	vec3 pos;
-	vec2 material;
+	//vec2 material;
 
 	float radius;
 };
@@ -77,6 +78,13 @@ struct rt_scene {
 	int sphere_count;//define
 	int light_count;//define
 	int plain_count;//define
+};
+
+struct hit_record {
+	rt_material mat;
+  	vec3 pt;
+  	vec3 n;
+  	float t;
 };
 
 //layout (local_size_x = 16, local_size_y = 16) in;
@@ -140,14 +148,15 @@ void _dbg(vec3 value)
 }
 
 const int iterations = 5;
-const float maxDist = 1000.0;
+const float maxDist = 1000000.0;
 const vec3 amb = vec3(1.0);
 const float eps = 0.001;
 
 #define sp_size 8
 
-vec4 spheres[sp_size];
-vec4 colors[sp_size];
+vec4 spheres_[sp_size];
+rt_sphere spheres[sp_size];
+//vec4 colors[sp_size];
 rt_material materials[sp_size];
 
 
@@ -164,16 +173,16 @@ void init()
     // X Y Z Radius
     // spheres[0] = vec4(      0.8,       0,    -1.5,    0.1);
     // spheres[1] = vec4(      -0.8,    0.25,    -1.5,    0.1);
-	rt_material mat = rt_material(vec3(1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
+	rt_material mat = rt_material(vec3(1,0,1), vec3(0), 0.7, 0.1, 0, 30, 0.8, 0.2);
 
-	spheres[0] = vec4(      0.8,       0,    -1.5, 1);
-    spheres[1] = vec4(1, 0.25, 1.5, 0.3); //rt_sphere(vec3(1),vec3(1, 0.25, 1.5), vec2(0.1,0), 0.3);
-	spheres[2] = vec4(1006.0,       0,        0, 1000);//rt_sphere(vec3(1),vec3(1006.0,       0,       0 ),vec2(0.1,0), 1000);
-	spheres[3] = vec4(-1006.0,       0,       0, 1000);//rt_sphere(vec3(1),vec3(-1006.0,       0,       0),vec2(0.1,0), 1000);
-	spheres[4] = vec4(      0,  1006.0,       0, 1000);//rt_sphere(vec3(1),vec3(      0,  1006.0,       0),vec2(0.1,0), 1000);
-	spheres[5] = vec4(      0,  -1006.0,      0, 1000);//rt_sphere(vec3(1),vec3(      0,  -1006.0,      0),vec2(0.1,0), 1000);
-	spheres[6] = vec4(      0,       0, 1006.0 , 1000);//rt_sphere(vec3(1),vec3(      0,       0, 1006.0 ), vec2(0.1,0), 1000);
-	spheres[7] = vec4(      0,       0, -1006.0, 1000);//rt_sphere(vec3(1),vec3(      0,       0, -1006.0),vec2(0.1,0), 1000);
+	spheres_[0] = vec4(      0.8,       0,    -1.5, 1);
+    spheres_[1] = vec4(1, 0.25, 1.5, 0.3); //rt_sphere(vec3(1),vec3(1, 0.25, 1.5), vec2(0.1,0), 0.3);
+	spheres_[2] = vec4(1006.0,       0,        0, 1000);//rt_sphere(vec3(1),vec3(1006.0,       0,       0 ),vec2(0.1,0), 1000);
+	spheres_[3] = vec4(-1006.0,       0,       0, 1000);//rt_sphere(vec3(1),vec3(-1006.0,       0,       0),vec2(0.1,0), 1000);
+	spheres_[4] = vec4(      0,  1006.0,       0, 1000);//rt_sphere(vec3(1),vec3(      0,  1006.0,       0),vec2(0.1,0), 1000);
+	spheres_[5] = vec4(      0,  -1006.0,      0, 1000);//rt_sphere(vec3(1),vec3(      0,  -1006.0,      0),vec2(0.1,0), 1000);
+	spheres_[6] = vec4(      0,       0, 1006.0 , 1000);//rt_sphere(vec3(1),vec3(      0,       0, 1006.0 ), vec2(0.1,0), 1000);
+	spheres_[7] = vec4(      0,       0, -1006.0, 1000);//rt_sphere(vec3(1),vec3(      0,       0, -1006.0),vec2(0.1,0), 1000);
 
 	materials[0] = mat;	
     materials[1] = mat;
@@ -183,7 +192,15 @@ void init()
     materials[5] = mat;				
     materials[6] = mat;
 	materials[7] = mat;
-	// spheres[2] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	spheres[0] = rt_sphere(mat,vec3(0.8, 0, -1.5), 1);
+	spheres[1] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
+	spheres[2] = rt_sphere(mat,vec3(1006.0,       0,        0), 1000);
+	spheres[3] = rt_sphere(mat,vec3(-1006.0,       0,       0), 1000);
+	spheres[4] = rt_sphere(mat,vec3(      0,  1006.0,       0), 1000);
+	spheres[5] = rt_sphere(mat,vec3(      0,  -1006.0,      0), 1000);
+	spheres[6] = rt_sphere(mat,vec3(      0,       0, 1006.0 ), 1000);
+	spheres[7] = rt_sphere(mat,vec3(      0,       0, -1006.0), 1000);
+
 	// spheres[3] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[4] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[5] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
@@ -298,14 +315,33 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 //     return false; 
 // }
 
-float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat, out int type)
+// float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat, out int type)
+// {
+// 	float tm = maxDist;
+// 	float t;
+// 	int num = -1;
+// 	for (int i = 1; i < sp_size; ++i)
+// 		if (intersectSphere(ro,rd, spheres_[i],tm,t)) {num = i; tm = t; mat = materials[num]; ob = spheres_[num]; type = 1;}
+// 	return tm;
+// }
+
+bool calcInter(vec3 ro, vec3 rd, out hit_record hr)
 {
 	float tm = maxDist;
 	float t;
-	int num = -1;
-	for (int i = 1; i < sp_size; ++i)
-		if (intersectSphere(ro,rd, spheres[i],tm,t)) {num = i; tm = t; mat = materials[num]; ob = spheres[num]; type = 1;}
-	return tm;
+	int num = 0;
+	for (int i = 1; i < sp_size; ++i) {
+		if (intersectSphere(ro,rd, vec4(spheres[i].pos, spheres[i].radius),tm,t)) {
+			tm = t; 
+			num = i;
+			hr.t = tm;
+			hr.pt = ro + rd*tm;
+			hr.n = normalize(hr.pt - spheres[num].pos);
+			hr.mat = spheres[num].mat;
+		}
+	}
+	
+	return tm < maxDist;
 }
 
 bool inShadow(vec3 ro,vec3 rd,float d)
@@ -314,7 +350,7 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	float t;
 	
 	for (int i = 1; i < sp_size; ++i)
-		if(intersectSphere(ro,rd,spheres[i],d,t)) {ret = true;}
+		if(intersectSphere(ro,rd,vec4(spheres[i].pos, spheres[i].radius),d,t)) {ret = true;}
 	return ret;
 }
 
@@ -327,7 +363,7 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 	vec3 diffuse = vec3(0);
 	vec3 specular = vec3(0);
 
-	vec3 pixelColor =  vec3(0);
+	vec3 pixelColor = vec3(0);
 	//return vec3(1);
 	//if(diffuse > 0.0) //If its not a light
 	{
@@ -339,7 +375,7 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 			// }
 
 			//if (lights[i].type == LIGHT_POINT) {
-				l = spheres[i].xyz - pt;
+				l = spheres[i].pos - pt;
 				dist = length(l);
 				//distDiv = dist;
 				distDiv = 1 + dist*dist; // 1 + dist * dist;
@@ -486,14 +522,14 @@ void main()
 	
 	for(int i = 0; i < iterations; i++)
 	{
-		tm = calcInter(ro,rd,ob,mat,type);
-		col = mat.color;
-		if(tm < maxDist)
-		//if(calcInter(ro,rd,pt,col,n,mat))
+		hit_record hr;
+		if(calcInter(ro,rd,hr))
 		{
-			pt = ro + rd*tm;
-			n = getNormal(type, ob, pt);
-			//n = normalize(pt - ob.xyz);
+			col = hr.mat.color;
+			pt =  hr.pt;
+			n = hr.n;
+			mat = hr.mat;
+
 			bool outside = dot(rd, n) < 0;
 
 			#if TOTAL_INTERNAL_REFLECTION
@@ -555,10 +591,10 @@ void main()
             }
 			
 		} 
-		// else {
-		// 	color += scene.bg_color * mask;
-		// 	break;
-		// }
+		else {
+			color += scene.bg_color * mask;
+			break;
+		}
 	}
 	#if DBG == 0
 	gl_FragColor = vec4(color,1);
