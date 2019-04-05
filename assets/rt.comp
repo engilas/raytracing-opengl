@@ -80,7 +80,6 @@ struct rt_scene {
 };
 
 //layout (local_size_x = 16, local_size_y = 16) in;
-layout (rgba32f, binding = 0) uniform image2D img_output;
 
 layout( std140, binding=1 ) uniform scene_buf
 {
@@ -115,8 +114,8 @@ bool dbgEd = false;
 void _dbg()
 {
 	#if DBG
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    gl_FragColor =vec4(1,0,0,0);
+	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
+    gl_FragColor =vec4(1,0,0,1);
 	dbgEd = true;
 	#endif
 }
@@ -125,8 +124,8 @@ void _dbg(float value)
 {
 	#if DBG
 	value = clamp(value, 0, 1);
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    gl_FragColor = vec4(value,value,value,0);
+	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
+    gl_FragColor = vec4(value,value,value,1);
 	dbgEd = true;
 	#endif
 }
@@ -134,8 +133,8 @@ void _dbg(float value)
 void _dbg(vec3 value)
 {
 	#if DBG
-	ivec2 pixel_coords = ivec2 (gl_GlobalInvocationID.xy);
-    gl_FragColor = vec4(clamp(value, vec3(0), vec3(1)),0);
+	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
+    gl_FragColor = vec4(clamp(value, vec3(0), vec3(1)),1);
 	dbgEd = true;
 	#endif
 }
@@ -465,7 +464,7 @@ void main()
 	#if AIM_ENABLED
 	if (pixel_coords == ivec2(scene.canvas_width / 2, scene.canvas_height / 2))
 	{
-		imageStore(img_output, pixel_coords, vec4(1,1,1,0));
+		gl_FragColor = vec4(1);
 		return;
 	}
 	#endif
