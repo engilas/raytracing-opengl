@@ -39,11 +39,7 @@ struct rt_material {
 
 struct rt_sphere {
 	rt_material mat;
-	//vec3 color;
-	vec3 pos;
-	//vec2 material;
-
-	float radius;
+	vec4 obj;
 };
 
 struct rt_plain {
@@ -192,14 +188,15 @@ void init()
     materials[5] = mat;				
     materials[6] = mat;
 	materials[7] = mat;
-	spheres[0] = rt_sphere(mat,vec3(0.8, 0, -1.5), 1);
-	spheres[1] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
-	spheres[2] = rt_sphere(mat,vec3(1006.0,       0,        0), 1000);
-	spheres[3] = rt_sphere(mat,vec3(-1006.0,       0,       0), 1000);
-	spheres[4] = rt_sphere(mat,vec3(      0,  1006.0,       0), 1000);
-	spheres[5] = rt_sphere(mat,vec3(      0,  -1006.0,      0), 1000);
-	spheres[6] = rt_sphere(mat,vec3(      0,       0, 1006.0 ), 1000);
-	spheres[7] = rt_sphere(mat,vec3(      0,       0, -1006.0), 1000);
+
+	spheres[0] = rt_sphere(mat,vec4(0.8, 0, -1.5, 1));
+	spheres[1] = rt_sphere(mat,vec4(1, 0.25, 1.5, 0.3));
+	spheres[2] = rt_sphere(mat,vec4(1006.0,       0,        0, 1000));
+	spheres[3] = rt_sphere(mat,vec4(-1006.0,       0,       0, 1000));
+	spheres[4] = rt_sphere(mat,vec4(      0,  1006.0,       0, 1000));
+	spheres[5] = rt_sphere(mat,vec4(      0,  -1006.0,      0, 1000));
+	spheres[6] = rt_sphere(mat,vec4(      0,       0, 1006.0 , 1000));
+	spheres[7] = rt_sphere(mat,vec4(      0,       0, -1006.0, 1000));
 
 	// spheres[3] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[4] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
@@ -319,29 +316,44 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 // {
 // 	float tm = maxDist;
 // 	float t;
-// 	int num = -1;
 // 	for (int i = 1; i < sp_size; ++i)
-// 		if (intersectSphere(ro,rd, spheres_[i],tm,t)) {num = i; tm = t; mat = materials[num]; ob = spheres_[num]; type = 1;}
+// 		if (intersectSphere(ro,rd, spheres_[i],tm,t)) {tm = t; mat = materials[i]; ob = spheres_[i]; type = 1;}
 // 	return tm;
 // }
 
-bool calcInter(vec3 ro, vec3 rd, out hit_record hr)
+// bool calcInter(vec3 ro, vec3 rd, out hit_record hr)
+// {
+// 	float tm = maxDist;
+// 	float t;
+// 	int num = 0;
+// 	for (int i = 1; i < sp_size; ++i) {
+// 		if (intersectSphere(ro,rd, vec4(spheres[i].pos, spheres[i].radius),tm,t)) {
+// 			tm = t; 
+// 			num = i;
+// 			hr.t = tm;
+// 			hr.pt = ro + rd*tm;
+// 			hr.n = normalize(hr.pt - spheres[num].pos);
+// 			hr.mat = spheres[num].mat;
+// 		}
+// 	}
+	
+//  	return tm < maxDist;
+// }
+
+
+float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat, out int type)
 {
 	float tm = maxDist;
 	float t;
 	int num = 0;
 	for (int i = 1; i < sp_size; ++i) {
-		if (intersectSphere(ro,rd, vec4(spheres[i].pos, spheres[i].radius),tm,t)) {
-			tm = t; 
-			num = i;
-			hr.t = tm;
-			hr.pt = ro + rd*tm;
-			hr.n = normalize(hr.pt - spheres[num].pos);
-			hr.mat = spheres[num].mat;
+		vec4 ob2 = spheres[i].obj;
+		if (intersectSphere(ro,rd, ob2,tm,t)) {
+			tm = t; mat = spheres[i].mat; ob = ob2; type = 1;
 		}
 	}
 	
-	return tm < maxDist;
+ 	return tm;
 }
 
 bool inShadow(vec3 ro,vec3 rd,float d)
@@ -350,7 +362,8 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	float t;
 	
 	for (int i = 1; i < sp_size; ++i)
-		if(intersectSphere(ro,rd,vec4(spheres[i].pos, spheres[i].radius),d,t)) {ret = true;}
+		//if(intersectSphere(ro,rd,vec4(spheres[i].pos, spheres[i].radius),d,t)) {ret = true;}
+		if(intersectSphere(ro,rd,spheres_[i],d,t)) {ret = true;}
 	return ret;
 }
 
@@ -375,7 +388,7 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 			// }
 
 			//if (lights[i].type == LIGHT_POINT) {
-				l = spheres[i].pos - pt;
+				l = spheres_[i].xyz - pt;
 				dist = length(l);
 				//distDiv = dist;
 				distDiv = 1 + dist*dist; // 1 + dist * dist;
@@ -522,13 +535,20 @@ void main()
 	
 	for(int i = 0; i < iterations; i++)
 	{
-		hit_record hr;
-		if(calcInter(ro,rd,hr))
+		//hit_record hr;
+		tm = calcInter(ro,rd,ob,mat,type);
+		col = mat.color;
+		if(tm < maxDist)
+		//if(calcInter(ro,rd,hr))
 		{
-			col = hr.mat.color;
-			pt =  hr.pt;
-			n = hr.n;
-			mat = hr.mat;
+			// col = hr.mat.color;
+			// pt =  hr.pt;
+			// n = hr.n;
+			// mat = hr.mat;
+
+
+			pt = ro + rd*tm;
+			n = getNormal(type, ob, pt);
 
 			bool outside = dot(rd, n) < 0;
 
