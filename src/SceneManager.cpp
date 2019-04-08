@@ -211,7 +211,7 @@ rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material mat
 	// sphere.pos = center;
 	// sphere.radius = radius;
 	//
-	// sphere.material = material;
+	sphere.material = material;
 
 	return sphere;
 }
@@ -263,8 +263,8 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 void SceneManager::initBuffers()
 {
     //create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 0.1));
-	spheres.push_back(create_sphere({0.8,0,-1.5}, 1, create_material({0,1,0}, 30, 1.0)));
-	spheres.push_back(create_sphere({ 1, 0.25, 1.5}, 0.3, create_material({ 0,1,0 }, 30, 1.0)));
+	spheres.push_back(create_sphere({0.8,0,-1.5}, 1, create_material({0,1,0}, 30, 0.0)));
+	spheres.push_back(create_sphere({ 1, 0.25, 1.5}, 0.3, create_material({ 0,1,0 }, 30, 0.0)));
 	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 0, 0.7));
 
 	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
@@ -289,18 +289,19 @@ void SceneManager::initBuffers()
     plainMat.diffuse = 0.7;
     plainMat.kd = 0.8;
     plainMat.ks = 0.2;*/
-    /*plains.push_back(create_plain({0,1,0}, {0,-1,0}, create_material({1,1,1}, 50, 0.1)));
-    plains.push_back(create_plain({0,-1,0}, {0,6,0}, create_material({1,1,1}, 50, 0.1)));
-    plains.push_back(create_plain({0,0,-1}, {0,0,6}, create_material({1,1,1}, 50, 0.1)));
-    plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
-    plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
-    plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));*/
-    spheres.push_back(create_sphere({ 0,-1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    spheres.push_back(create_sphere({ 0, 1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    spheres.push_back(create_sphere({ 1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    spheres.push_back(create_sphere({ -1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    spheres.push_back(create_sphere({0, 0, 1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    spheres.push_back(create_sphere({0, 0, -1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
+	plains.push_back(create_plain({0,1,0}, {0,-6,0}, create_material({1,1,1}, 50, 0.1)));
+	plains.push_back(create_plain({0,-1,0}, {0,6,0}, create_material({1,1,1}, 50, 0.1)));
+	plains.push_back(create_plain({0,0,-1}, {0,0,6}, create_material({1,1,1}, 50, 0.1)));
+	plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
+	plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
+	plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));
+
+    // spheres.push_back(create_sphere({ 0,-1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    // spheres.push_back(create_sphere({ 0, 1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    // spheres.push_back(create_sphere({ 1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    // spheres.push_back(create_sphere({ -1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    // spheres.push_back(create_sphere({0, 0, 1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    // spheres.push_back(create_sphere({0, 0, -1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
 
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size(), plains.size());
 
@@ -310,19 +311,25 @@ void SceneManager::initBuffers()
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, sceneUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	// glGenBuffers(1, &sphereUbo);
-	// glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
-	// glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
-	// glBindBufferBase(GL_UNIFORM_BUFFER, 1, sphereUbo);
-	// glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glGenBuffers(1, &sphereUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 1, sphereUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	for (int i = 0; i < spheres.size(); i++)
-	{
-		char element[50];
-		sprintf_s(element, "spheres_[%d]", i);
-		GLuint loc = glGetUniformLocation(wrapper->renderHandle, element);
-		glUniform4f(loc, spheres[i].obj.x, spheres[i].obj.y, spheres[i].obj.z, spheres[i].obj.w);
-	}
+	glGenBuffers(1, &plainUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, plainUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_plain) * plains.size(), plains.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 2, plainUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	// for (int i = 0; i < spheres.size(); i++)
+	// {
+	// 	char element[50];
+	// 	sprintf_s(element, "spheres_[%d]", i);
+	// 	GLuint loc = glGetUniformLocation(wrapper->renderHandle, element);
+	// 	glUniform4f(loc, spheres[i].obj.x, spheres[i].obj.y, spheres[i].obj.z, spheres[i].obj.w);
+	// }
 
 	// glGenBuffers(1, &sphereUbo);
 	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereUbo);

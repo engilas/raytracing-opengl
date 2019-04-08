@@ -43,7 +43,7 @@ private:
 
 	GLuint sceneUbo = 0;
 	GLuint sphereUbo = 0;
- //    GLuint plainSsbo = 0;
+    GLuint plainUbo = 0;
 	// GLuint lightSsbo = 0;
 
 	void multiplyVector(float v[3], float s);
