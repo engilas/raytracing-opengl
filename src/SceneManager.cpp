@@ -80,8 +80,8 @@ void SceneManager::ProcessRotations(float frameRate)
 			auto sphere = static_cast<rt_sphere*>(rot->primitive);
 			rot->current += frameRate * rot->speed;
 
-			sphere->pos.x = rot->a * cos(rot->current);
-			sphere->pos.z = rot->b * sin(rot->current);
+			// sphere->pos.x = rot->a * cos(rot->current);
+			// sphere->pos.z = rot->b * sin(rot->current);
 
 			break;
 		}
@@ -206,11 +206,12 @@ rt_material SceneManager::create_material(vec3 color, int specular, float reflec
 rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material material)
 {
 	rt_sphere sphere = {};
+	sphere.obj = { center.x, center.y, center.z, radius };
 
-	sphere.pos = center;
-	sphere.radius = radius;
-
-	sphere.material = material;
+	// sphere.pos = center;
+	// sphere.radius = radius;
+	//
+	// sphere.material = material;
 
 	return sphere;
 }
@@ -262,7 +263,8 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 void SceneManager::initBuffers()
 {
     //create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 0.1));
-	spheres.push_back(create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 1.0)));
+	spheres.push_back(create_sphere({0.8,0,-1.5}, 1, create_material({0,1,0}, 30, 1.0)));
+	spheres.push_back(create_sphere({ 1, 0.25, 1.5}, 0.3, create_material({ 0,1,0 }, 30, 1.0)));
 	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 0, 0.7));
 
 	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
@@ -275,7 +277,7 @@ void SceneManager::initBuffers()
 	//spheres.push_back(sp);
 
 	//lights.push_back(create_light(ambient, 0.2f, { 1,1,1 }, { 0 }, { 0 }));
-	lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 2, 3, 0 }, { 0 }));
+	//lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 2, 3, 0 }, { 0 }));
     //lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 2, -5, 0 }, { 0 }));
 	//lights.push_back(create_light(direct, 2.2f, { 1,1,1 }, { 0 }, { -1,-4,-4 }));
 
@@ -293,7 +295,7 @@ void SceneManager::initBuffers()
     plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
     plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
     plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));*/
-    spheres.push_back(create_sphere({ 0,-1001,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
+    spheres.push_back(create_sphere({ 0,-1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({ 0, 1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({ 1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     spheres.push_back(create_sphere({ -1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
@@ -302,16 +304,30 @@ void SceneManager::initBuffers()
 
 	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size(), plains.size());
 
-	glGenBuffers(1, &sceneSsbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, sceneSsbo);
+	glGenBuffers(1, &sceneUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_scene), NULL, GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 1, sceneSsbo);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, sceneUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	// glGenBuffers(1, &sphereSsbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
+	// glGenBuffers(1, &sphereUbo);
+	// glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
+	// glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
+	// glBindBufferBase(GL_UNIFORM_BUFFER, 1, sphereUbo);
+	// glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	for (int i = 0; i < spheres.size(); i++)
+	{
+		char element[50];
+		sprintf_s(element, "spheres_[%d]", i);
+		GLuint loc = glGetUniformLocation(wrapper->renderHandle, element);
+		glUniform4f(loc, spheres[i].obj.x, spheres[i].obj.y, spheres[i].obj.z, spheres[i].obj.w);
+	}
+
+	// glGenBuffers(1, &sphereUbo);
+	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereUbo);
 	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
-	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sphereSsbo);
+	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sphereUbo);
 	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
  //
  //    glGenBuffers(1, &plainSsbo);
@@ -331,14 +347,14 @@ void SceneManager::updateBuffers() const
 {
 	//glUniform1i(glGetUniformLocation(wrapper->computeHandle, "sphere_count"), 8);
 
-	glBindBuffer(GL_UNIFORM_BUFFER, sceneSsbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
 	GLvoid* scene_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	memcpy(scene_p, &scene, sizeof(rt_scene));
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
     // if (!spheres.empty())
     // {
-    //     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereSsbo);
+    //     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereUbo);
 	   //  GLvoid* spheres_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
 	   //  memcpy(spheres_p, spheres.data(), sizeof(rt_sphere) * spheres.size());
 	   //  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);

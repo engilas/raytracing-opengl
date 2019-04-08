@@ -18,9 +18,10 @@ typedef struct {
 } rt_material;
 
 typedef struct {
-    rt_material material; 
-	vec3 pos;
-	float radius;
+	vec4 obj;
+    //rt_material material; 
+	//vec3 pos;
+	//float radius;
 } rt_sphere;
 
 struct rt_plain {

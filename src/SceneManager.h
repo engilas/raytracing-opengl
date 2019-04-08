@@ -41,10 +41,10 @@ private:
 	float pitch = 0;
 	float yaw = 0;
 
-	GLuint sceneSsbo = 0;
-	GLuint sphereSsbo = 0;
-    GLuint plainSsbo = 0;
-	GLuint lightSsbo = 0;
+	GLuint sceneUbo = 0;
+	GLuint sphereUbo = 0;
+ //    GLuint plainSsbo = 0;
+	// GLuint lightSsbo = 0;
 
 	void multiplyVector(float v[3], float s);
 	void addVector(vec3 & v1, const float v2[3]);

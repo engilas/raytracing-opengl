@@ -38,8 +38,9 @@ struct rt_material {
 };
 
 struct rt_sphere {
-	rt_material mat;
 	vec4 obj;
+	//vec4 mat;
+	
 };
 
 struct rt_plain {
@@ -83,12 +84,20 @@ struct hit_record {
   	float t;
 };
 
-//layout (local_size_x = 16, local_size_y = 16) in;
+#define sp_size 8
 
-layout( std140, binding=1 ) uniform scene_buf
+layout( std140, binding=0 ) uniform scene_buf
 {
     rt_scene scene;
 };
+
+// layout( std140, binding=1 ) uniform sphere_buf
+// {
+//     rt_sphere spheres[sp_size];
+// };
+
+//uniform rt_sphere[sp_size] spheres;
+//uniform vec4[sp_size] spheres_;
 
 // layout( std430, binding=2 ) readonly buffer spheres_buf
 // {
@@ -107,9 +116,9 @@ layout( std140, binding=1 ) uniform scene_buf
 
 //uniform readonly int sphere_count;
 
-layout(binding=5) uniform UBO {
-	int sphere_count;
-};
+// layout(binding=5) uniform UBO {
+// 	int sphere_count;
+// };
 
 #if DBG
 bool dbgEd = false;
@@ -148,10 +157,8 @@ const float maxDist = 1000000.0;
 const vec3 amb = vec3(1.0);
 const float eps = 0.001;
 
-#define sp_size 8
-
 vec4 spheres_[sp_size];
-rt_sphere spheres[sp_size];
+//rt_sphere spheres[sp_size];
 //vec4 colors[sp_size];
 rt_material materials[sp_size];
 
@@ -189,15 +196,23 @@ void init()
     materials[6] = mat;
 	materials[7] = mat;
 
-	spheres[0] = rt_sphere(mat,vec4(0.8, 0, -1.5, 1));
-	spheres[1] = rt_sphere(mat,vec4(1, 0.25, 1.5, 0.3));
-	spheres[2] = rt_sphere(mat,vec4(1006.0,       0,        0, 1000));
-	spheres[3] = rt_sphere(mat,vec4(-1006.0,       0,       0, 1000));
-	spheres[4] = rt_sphere(mat,vec4(      0,  1006.0,       0, 1000));
-	spheres[5] = rt_sphere(mat,vec4(      0,  -1006.0,      0, 1000));
-	spheres[6] = rt_sphere(mat,vec4(      0,       0, 1006.0 , 1000));
-	spheres[7] = rt_sphere(mat,vec4(      0,       0, -1006.0, 1000));
+	// spheres[0] = rt_sphere(vec4(0.8, 0, -1.5, 1)				,vec4(0));
+	// spheres[1] = rt_sphere(vec4(1, 0.25, 1.5, 0.3)				,vec4(0));
+	// spheres[2] = rt_sphere(vec4(1006.0,       0,        0, 1000),vec4(0));
+	// spheres[3] = rt_sphere(vec4(-1006.0,       0,       0, 1000),vec4(0));
+	// spheres[4] = rt_sphere(vec4(      0,  1006.0,       0, 1000),vec4(0));
+	// spheres[5] = rt_sphere(vec4(      0,  -1006.0,      0, 1000),vec4(0));
+	// spheres[6] = rt_sphere(vec4(      0,       0, 1006.0 , 1000),vec4(0));
+	// spheres[7] = rt_sphere(vec4(      0,       0, -1006.0, 1000),vec4(0));
 
+	// spheres[0] = rt_sphere(vec4(0.8, 0, -1.5, 1)				);
+	// spheres[1] = rt_sphere(vec4(1, 0.25, 1.5, 0.3)				);
+	// spheres[2] = rt_sphere(vec4(1006.0,       0,        0, 1000));
+	// spheres[3] = rt_sphere(vec4(-1006.0,       0,       0, 1000));
+	// spheres[4] = rt_sphere(vec4(      0,  1006.0,       0, 1000));
+	// spheres[5] = rt_sphere(vec4(      0,  -1006.0,      0, 1000));
+	// spheres[6] = rt_sphere(vec4(      0,       0, 1006.0 , 1000));
+	// spheres[7] = rt_sphere(vec4(      0,       0, -1006.0, 1000));
 	// spheres[3] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[4] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
 	// spheres[5] = rt_sphere(mat,vec3(1, 0.25, 1.5), 0.3);
@@ -346,12 +361,40 @@ float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat, out int type
 	float tm = maxDist;
 	float t;
 	int num = 0;
-	for (int i = 1; i < sp_size; ++i) {
-		vec4 ob2 = spheres[i].obj;
+	for (int i = 1; i < 8; ++i) {
+		vec4 ob2 = spheres_[i];
 		if (intersectSphere(ro,rd, ob2,tm,t)) {
-			tm = t; mat = spheres[i].mat; ob = ob2; type = 1;
+			tm = t; mat = materials[i]; /* spheres[i].mat; */ ob = ob2; type = 1;
 		}
 	}
+	// vec4 ob2 = spheres_[1];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[1]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
+	// ob2 = spheres_[2];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[2]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
+	// ob2 = spheres_[3];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[3]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
+	// ob2 = spheres_[4];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[4]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
+	// ob2 = spheres_[5];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[5]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
+	// ob2 = spheres_[6];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[6]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
+	// ob2 = spheres_[7];
+	// if (intersectSphere(ro,rd, ob2,tm,t)) {
+	// 	tm = t; mat = materials[7]; /* spheres[i].mat; */ ob = ob2; type = 1;
+	// }
 	
  	return tm;
 }
@@ -362,8 +405,16 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	float t;
 	
 	for (int i = 1; i < sp_size; ++i)
-		//if(intersectSphere(ro,rd,vec4(spheres[i].pos, spheres[i].radius),d,t)) {ret = true;}
 		if(intersectSphere(ro,rd,spheres_[i],d,t)) {ret = true;}
+		//if(intersectSphere(ro,rd,vec4(spheres[i].pos, spheres[i].radius),d,t)) {ret = true;}
+		
+	// if(intersectSphere(ro,rd,spheres_[1],d,t)) {ret = true;}
+	// if(intersectSphere(ro,rd,spheres_[2],d,t)) {ret = true;}
+	// if(intersectSphere(ro,rd,spheres_[3],d,t)) {ret = true;}
+	// if(intersectSphere(ro,rd,spheres_[4],d,t)) {ret = true;}
+	// if(intersectSphere(ro,rd,spheres_[5],d,t)) {ret = true;}
+	// if(intersectSphere(ro,rd,spheres_[6],d,t)) {ret = true;}
+	// if(intersectSphere(ro,rd,spheres_[7],d,t)) {ret = true;}
 	return ret;
 }
 

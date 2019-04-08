@@ -166,10 +166,13 @@ GLuint GLWrapper::genRenderProg()
 	glGetProgramiv(progHandle, GL_LINK_STATUS, &rvalue);
 	if (!rvalue) {
 		fprintf(stderr, "Error in linking sp\n");
+		check_program_errors(progHandle);
 		exit(32);
 	}
 
 	glUseProgram(progHandle);
+
+	delete[] fpSrc;
 	//glUniform1i(glGetUniformLocation(progHandle, "srcTex"), 0);
 
 	// GLuint vertArray;
