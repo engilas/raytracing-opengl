@@ -1,6 +1,14 @@
 #pragma once
 
 #include "primitives.h"
+#include <vector>
+
+struct rt_defines
+{
+	int sphere_size;
+	int plain_size;
+	int light_size;
+};
 
 typedef struct {
 	vec3 color; float __p1;
@@ -59,9 +67,7 @@ typedef struct {
 	float viewport_dist;
 
 	int reflect_depth;
-	int sphere_count;
-	int light_count;
-    int plain_count;
+	float __padding[3];
 
     //float __padding[1];
 } rt_scene;
@@ -75,3 +81,17 @@ typedef struct
 	float current;
 	float speed;
 } rotating_primitive;
+
+struct scene_container
+{
+	rt_scene scene;
+	std::vector<rt_sphere> spheres;
+	std::vector<rt_plain> plains;
+	std::vector<rt_light> lights;
+	std::vector<rotating_primitive> rotating_primitives;
+
+	rt_defines get_defines()
+	{
+		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights.size())};
+	}
+};

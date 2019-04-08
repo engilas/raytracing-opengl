@@ -25,6 +25,7 @@
 // #define LIGHT_AMBIENT2 vec3(0.00)
 // #define OBJECT_ABSORB  vec3(0.0, 5.0, 5.0) // for beers law
 #define AIM_ENABLED 1
+#define PLANE_ONESIDE 1
 
 struct rt_material {
 	vec3 color;
@@ -72,9 +73,6 @@ struct rt_scene {
 	float viewport_dist;//remove
 
 	int reflect_depth;//define
-	int sphere_count;//define
-	int light_count;//define
-	int plain_count;//define
 };
 
 struct hit_record {
@@ -84,8 +82,12 @@ struct hit_record {
   	//float t;
 };
 
-#define sp_size 2
-#define plain_size 6
+// #define SPHERE_SIZE {SPHERE_SIZE}
+// #define PLAIN_SIZE {PLAIN_SIZE}
+// #define LIGHT_SIZE {LIGHT_SIZE}
+#define SPHERE_SIZE 1
+#define PLAIN_SIZE 6
+#define LIGHT_SIZE 1
 
 layout( std140, binding=0 ) uniform scene_buf
 {
@@ -94,15 +96,15 @@ layout( std140, binding=0 ) uniform scene_buf
 
 // layout( std140, binding=1 ) uniform sphere_buf
 // {
-//     rt_sphere spheres[sp_size];
+//     rt_sphere spheres[SPHERE_SIZE];
 // };
 layout( std140, binding=1 ) uniform sphere_buf
 {
-    rt_sphere spheres[sp_size];
+    rt_sphere spheres[SPHERE_SIZE];
 };
 
-//uniform rt_sphere[sp_size] spheres;
-//uniform vec4[sp_size] spheres_;
+//uniform rt_sphere[SPHERE_SIZE] spheres;
+//uniform vec4[SPHERE_SIZE] spheres_;
 
 // layout( std430, binding=2 ) readonly buffer spheres_buf
 // {
@@ -111,13 +113,13 @@ layout( std140, binding=1 ) uniform sphere_buf
 
 layout( std140, binding=2 ) uniform plains_buf
 {
-    rt_plain plains[plain_size];
+    rt_plain plains[PLAIN_SIZE];
 };
 
-// layout( std430, binding=4 ) readonly buffer lights_buf
-// {
-//     rt_light lightss[ ];
-// };
+layout( std140, binding=3 ) uniform lights_buf
+{
+    rt_light lights[LIGHT_SIZE];
+};
 
 //uniform readonly int sphere_count;
 
@@ -219,7 +221,12 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 
 bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
 	float denom = clamp(dot(n, rd), -1, 1); 
-    if (denom < -1e-6) {
+	#ifdef PLANE_ONESIDE
+		if (denom < -1e-6) 
+	#else
+    	if (abs(denom) > 1e-6) 
+	#endif
+	{
         vec3 p_ro = p - ro; 
         t = dot(p_ro, n) / denom; 
         return (t > 0) && (t < tm);
@@ -228,52 +235,17 @@ bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
     return false; 
 }
 
-// float calcInter(vec3 ro, vec3 rd, out vec4 ob, out rt_material mat, out int type)
-// {
-// 	float tm = maxDist;
-// 	float t;
-// 	for (int i = 1; i < sp_size; ++i)
-// 		if (intersectSphere(ro,rd, spheres_[i],tm,t)) {tm = t; mat = materials[i]; ob = spheres_[i]; type = 1;}
-// 	return tm;
-// }
-
-// struct hit_record {
-// 	rt_material mat;
-//   	vec3 pt;
-//   	vec3 n;
-//   	float t;
-// };
-
-// bool calcInter(vec3 ro, vec3 rd, out hit_record hr)
-// {
-// 	float tm = maxDist;
-// 	float t;
-// 	for (int i = 1; i < sp_size; ++i) {
-// 		if (intersectSphere(ro,rd, spheres[i].obj,tm,t)) {
-// 			tm = t; 
-// 			//hr = hit_record(spheres[i].mat, );
-// 			hr.t = tm;
-// 			hr.pt = ro + rd*tm;
-// 			hr.n = normalize(hr.pt - spheres[i].obj.xyz);
-// 			hr.mat = spheres[i].mat;
-// 		}
-// 	}
-	
-//  	return tm < maxDist;
-// }
-
 
 float calcInter(vec3 ro, vec3 rd, out int num, out int type)
 {
 	float tm = maxDist;
 	float t;
-	//int num = 0;
-	for (int i = 0; i < plain_size; ++i) {
+	for (int i = 0; i < PLAIN_SIZE; ++i) {
 		if (intersectPlain(ro,rd, plains[i].normal,plains[i].pos,tm,t)) {
 			num = i; tm = t; type = 2;
 		}
 	}
-	for (int i = 1; i < sp_size; ++i) {
+	for (int i = 0; i < SPHERE_SIZE; ++i) {
 		if (intersectSphere(ro,rd, spheres[i].obj,tm,t)) {
 			num = i; tm = t; type = 1;
 		}
@@ -287,8 +259,14 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	bool ret = false;
 	float t;
 	
-	for (int i = 1; i < sp_size; ++i)
+	for (int i = 0; i < SPHERE_SIZE; ++i)
 		if(intersectSphere(ro,rd,spheres[i].obj,d,t)) {ret = true;}
+	#if PLANE_ONESIDE == 0
+	for (int i = 0; i < PLAIN_SIZE; ++i)
+		if(intersectPlain(ro,rd, plains[i].normal,plains[i].pos,d,t)) {ret = true;}
+	#endif
+
+
 	return ret;
 }
 
@@ -304,24 +282,27 @@ vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPo
 	vec3 pixelColor = vec3(0);
 	//return vec3(1);
 	//if(diffuse > 0.0) //If its not a light
-	{
-		for (int i = 0; i < 1; i++) {
-			lcol = vec3(1);
-			// if (lights[i].type == LIGHT_AMBIENT) {
-			// 	pixelColor += lights[i].intensity * col * lcol;
-			// 	continue;
-			// }
 
-			//if (lights[i].type == LIGHT_POINT) {
-				l = spheres[i].obj.xyz - pt;
+	//TODO:  разделить свет на 3 типа a, p, d  - каждый в своем буффере, итерировать по буфферу
+	{
+		for (int i = 0; i < LIGHT_SIZE; i++) {
+			lcol = lights[i].color;
+
+			if (lights[i].type == LIGHT_AMBIENT) {
+				pixelColor += lights[i].intensity * col * lcol;
+				continue;
+			}
+			if (lights[i].type == LIGHT_POINT) {
+				l = lights[i].pos - pt;
 				dist = length(l);
-				//distDiv = dist;
-				distDiv = 1 + dist*dist; // 1 + dist * dist;
-			// } else {
-			// 	l = - lights[i].direction;
-			// 	dist = maxDist;
-			// 	distDiv = 1;
-			// }
+				distDiv = 1 + dist*dist;
+			} 
+		 	if (lights[i].type == LIGHT_DIRECT) {
+			 	l = - lights[i].direction;
+			  	dist = maxDist;
+			  	distDiv = 1;
+			}
+
 			l = normalize(l);
 			
 			// diffuse
@@ -481,6 +462,7 @@ void main()
 			n = hr.n;
 
 			bool outside = dot(rd, n) < 0;
+			n = outside ? n : -n;
 
 			#if TOTAL_INTERNAL_REFLECTION
 			//float reflIdx = mat.y > 0 ? mat.y : REFRACTIVE_INDEX_AIR;
@@ -529,14 +511,14 @@ void main()
 			else 
 			if(mat.x > 0.0) // Reflective
 			{
-				ro = outside ? pt + n * eps : pt - n * eps;
-				color += LightPixel2(ro, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
+				ro = pt + n * eps;
+				color += LightPixel2(ro, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
             {
-				color += LightPixel2(outside ? pt + n * eps : pt - n * eps, rd, col, mat.diffuse, outside ? n : -n, mat.specular, true, mat.kd, mat.ks) * mask;
+				color += LightPixel2(pt + n * eps, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks) * mask;
                 break;
             }
 			

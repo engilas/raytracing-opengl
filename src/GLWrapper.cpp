@@ -1,6 +1,7 @@
 #include "GLWrapper.h"
 #include <iostream>
 #include <fstream>
+#include "scene.h"
 
 static void glfw_error_callback(int error, const char * desc)
 {
@@ -34,7 +35,7 @@ int GLWrapper::getHeight()
 	return height;
 }
 
-bool GLWrapper::init()
+bool GLWrapper::init_window()
 {
 	if (!glfwInit())
 		return false;
@@ -47,7 +48,7 @@ bool GLWrapper::init()
 	glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
 	glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
 
-	if (!useCustomResolution) 
+	if (!useCustomResolution)
 	{
 		width = mode->width;
 		height = mode->height;
@@ -70,11 +71,12 @@ bool GLWrapper::init()
 	}
 	printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
 
-    //texHandle = genTexture(width, height);
-	renderHandle = genRenderProg();
-	//renderHandle = genComputeProg();
-
 	return true;
+}
+
+void GLWrapper::init_shaders(rt_defines defines)
+{
+	renderHandle = genRenderProg(defines);
 }
 
 void GLWrapper::stop()
@@ -90,8 +92,6 @@ inline unsigned divup(unsigned a, unsigned b)
 
 void GLWrapper::draw()
 {
-	// glClearColor(0.0, 0.0, 0.0, 1.0);
-	// glClear(GL_COLOR_BUFFER_BIT);
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
 	checkErrors("Draw screen");
 }
@@ -115,7 +115,15 @@ static char* load_file(const char *fname, GLint &fSize)
 	return NULL;
 }
 
-GLuint GLWrapper::genRenderProg()
+bool replace(std::string& str, const std::string& from, const std::string& to) {
+	size_t start_pos = str.find(from);
+	if (start_pos == std::string::npos)
+		return false;
+	str.replace(start_pos, from.length(), to);
+	return true;
+}
+
+GLuint GLWrapper::genRenderProg(rt_defines defines)
 {
     GLuint progHandle = glCreateProgram();
 	GLuint vp = glCreateShader(GL_VERTEX_SHADER);
@@ -132,10 +140,18 @@ GLuint GLWrapper::genRenderProg()
 	};
 
 	GLint source_len;
-	auto fpSrc = load_file(ASSETS_DIR "/rt.frag", source_len);
+	auto fpSrcChar = load_file(ASSETS_DIR "/rt.frag", source_len);
+
+	std::string fpS(fpSrcChar, source_len);
+	replace(fpS, "{SPHERE_SIZE}", std::to_string(defines.sphere_size));
+	replace(fpS, "{PLAIN_SIZE}", std::to_string(defines.plain_size));
+	replace(fpS, "{LIGHT_SIZE}", std::to_string(defines.light_size));
+	//fpS.append('\0');
+	auto tmp = fpS.c_str();
+	source_len = fpS.size();
 
 	glShaderSource(vp, 2, vpSrc, NULL);
-	glShaderSource(fp, 1, &fpSrc, &source_len);
+	glShaderSource(fp, 1, &tmp, NULL);
 
 	glCompileShader(vp);
 	int rvalue;
@@ -172,72 +188,9 @@ GLuint GLWrapper::genRenderProg()
 
 	glUseProgram(progHandle);
 
-	delete[] fpSrc;
-	//glUniform1i(glGetUniformLocation(progHandle, "srcTex"), 0);
-
-	// GLuint vertArray;
-	// glGenVertexArrays(1, &vertArray);
-	// glBindVertexArray(vertArray);
-
-	// GLuint posBuf;
-	// glGenBuffers(1, &posBuf);
-	// glBindBuffer(GL_ARRAY_BUFFER, posBuf);
-	// float data[] = {
-	// 	-1.0f, -1.0f,
-	// 	-1.0f, 1.0f,
-	// 	1.0f, -1.0f,
-	// 	1.0f, 1.0f
-	// };
-	// glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 8, data, GL_STREAM_DRAW);
-	// GLint posPtr = glGetAttribLocation(progHandle, "pos");
-	//glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
-	//glEnableVertexAttribArray(0);
+	delete[] fpSrcChar;
 
 	checkErrors("Render shaders");
-	return progHandle;
-}
-
-GLuint GLWrapper::genComputeProg()
-{
-    // Creating the compute shader, and the program object containing the shader
-	GLuint progHandle = glCreateProgram();
-	GLuint cs = glCreateShader(GL_FRAGMENT_SHADER);
-
-	char *source;
-	GLint source_len;
-	source = load_file(ASSETS_DIR "/rt.comp", source_len);
-
-	glShaderSource(cs, 1, &source, &source_len);
-	glCompileShader(cs);
-	int rvalue;
-	glGetShaderiv(cs, GL_COMPILE_STATUS, &rvalue);
-	if (!rvalue) {
-		fprintf(stderr, "Error in compiling the compute shader\n");
-		GLchar log[10240];
-		GLsizei length;
-		glGetShaderInfoLog(cs, 10239, &length, log);
-		fprintf(stderr, "Compiler log:\n%s\n", log);
-		exit(40);
-	}
-	glAttachShader(progHandle, cs);
-
-	glLinkProgram(progHandle);
-	glGetProgramiv(progHandle, GL_LINK_STATUS, &rvalue);
-	if (!rvalue) {
-		fprintf(stderr, "Error in linking compute shader program\n");
-		GLchar log[10240];
-		GLsizei length;
-		glGetProgramInfoLog(progHandle, 10239, &length, log);
-		fprintf(stderr, "Linker log:\n%s\n", log);
-		exit(41);
-	}
-	glUseProgram(progHandle);
-
-
-	checkErrors("Compute shader");
-
-	delete[] source;
-
 	return progHandle;
 }
 
@@ -286,22 +239,4 @@ void GLWrapper::checkErrors(std::string desc)
 		fprintf(stderr, "OpenGL error in \"%s\": (%d)\n", desc.c_str(), e); //todo error must be here
 		exit(20);
 	}
-}
-
-GLuint GLWrapper::genTexture(int width, int height)
-{
-    GLuint texHandle;
-	glGenTextures(1, &texHandle);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, texHandle);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, NULL);
-
-	// Because we're also using this tex as an image (in order to write to it),
-	// we bind it to an image unit as well
-	glBindImageTexture(0, texHandle, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-	checkErrors("Gen texture");
-	return texHandle;
 }

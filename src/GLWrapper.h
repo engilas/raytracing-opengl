@@ -6,6 +6,8 @@
 #include <GLFW/glfw3.h>
 #include <string>
 
+struct rt_defines;
+
 class GLWrapper
 {
 public:
@@ -16,7 +18,9 @@ public:
 	int getWidth();
 	int getHeight();
 
-	bool init();
+	bool init_window();
+	void init_shaders(rt_defines defines);
+
 	void stop();
 
 	GLFWwindow* window;
@@ -41,8 +45,6 @@ private:
     static bool check_program_errors(GLuint program);
 
     static void checkErrors(std::string desc);
-	static GLuint genTexture(int width, int height);
-    static GLuint genRenderProg();
-    GLuint genComputeProg();
+    static GLuint genRenderProg(rt_defines defines);
 };
 

@@ -4,16 +4,12 @@
 
 #define PI_F 3.14159265358979f
 
-SceneManager::SceneManager(int wind_width, int wind_height, GLWrapper* wrapper)
+SceneManager::SceneManager(int wind_width, int wind_height, scene_container &scene, GLWrapper* wrapper)
 {
 	this->wind_width = wind_width;
 	this->wind_height = wind_height;
 	this->wrapper = wrapper;
-}
-
-rt_scene& SceneManager::getScene()
-{
-	return scene;
+	this->scene = scene;
 }
 
 void SceneManager::init()
@@ -70,9 +66,9 @@ void SceneManager::moveCamera(const float direction[3], vec3 &vector, float spee
 
 void SceneManager::ProcessRotations(float frameRate)
 {
-	for (int i = 0; i < rotating_primitives.size(); ++i)
+	for (int i = 0; i < scene.rotating_primitives.size(); ++i)
 	{
-		auto rot = rotating_primitives.data() + i;
+		auto rot = scene.rotating_primitives.data() + i;
 		switch (rot->type)
 		{
 		case sphere:
@@ -80,8 +76,8 @@ void SceneManager::ProcessRotations(float frameRate)
 			auto sphere = static_cast<rt_sphere*>(rot->primitive);
 			rot->current += frameRate * rot->speed;
 
-			// sphere->pos.x = rot->a * cos(rot->current);
-			// sphere->pos.z = rot->b * sin(rot->current);
+			sphere->obj.x = rot->a * cos(rot->current);
+			sphere->obj.z = rot->b * sin(rot->current);
 
 			break;
 		}
@@ -98,7 +94,7 @@ void SceneManager::UpdateScene(float frameRate)
 	Quaternion<float> qX(xAxis, -pitch * PI_F / 180.0f);
 	Quaternion<float> qY(yAxis, yaw * PI_F / 180.0f);
 	Quaternion<float> q = qY * qX;
-	scene.quat_camera_rotation = q.GetStruct();
+	scene.scene.quat_camera_rotation = q.GetStruct();
 
 
 	auto speed = frameRate;
@@ -108,18 +104,18 @@ void SceneManager::UpdateScene(float frameRate)
 		speed /= 6;
 
 	if (w_pressed)
-		moveCamera(q, zAxis, scene.camera_pos, speed);
+		moveCamera(q, zAxis, scene.scene.camera_pos, speed);
 	if (a_pressed)
-		moveCamera(q, xAxis, scene.camera_pos, -speed);
+		moveCamera(q, xAxis, scene.scene.camera_pos, -speed);
 	if (s_pressed)
-		moveCamera(q, zAxis, scene.camera_pos, -speed);
+		moveCamera(q, zAxis, scene.scene.camera_pos, -speed);
 	if (d_pressed)
-		moveCamera(q, xAxis, scene.camera_pos, speed);
+		moveCamera(q, xAxis, scene.scene.camera_pos, speed);
 
 	if (space_pressed)
-		moveCamera(yAxis, scene.camera_pos, speed);
+		moveCamera(yAxis, scene.scene.camera_pos, speed);
 	if (ctrl_pressed)
-		moveCamera(yAxis, scene.camera_pos, -speed);
+		moveCamera(yAxis, scene.scene.camera_pos, -speed);
 
 	ProcessRotations(frameRate);
 }
@@ -187,7 +183,7 @@ void SceneManager::glfw_mouse_callback(GLFWwindow* window, double xpos, double y
 		pitch = -89.0f;
 }
 
-rt_material SceneManager::create_material(vec3 color, int specular, float reflect, float refract = 0.0, vec3 absorb = {}, float diffuse = 0.7, float kd = 0.8, float ks = 0.2)
+rt_material SceneManager::create_material(vec3 color, int specular, float reflect, float refract, vec3 absorb , float diffuse, float kd, float ks)
 {
     rt_material material = {};
 
@@ -238,7 +234,7 @@ rt_light SceneManager::create_light(lightType type, float intensity, vec3 color,
 	return light;
 }
 
-rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int lightCount, int plainCount)
+rt_scene SceneManager::create_scene(int width, int height)
 {
 	auto min = width > height ? height : width;
 
@@ -253,18 +249,15 @@ rt_scene SceneManager::create_scene(int width, int height, int spheresCount, int
 	scene.bg_color = { 0,0.0,0.0 };
 	scene.reflect_depth = 3;
 
-	scene.sphere_count = spheresCount;
-	scene.light_count = lightCount;
-    scene.plain_count = plainCount;
-
 	return scene;
 }
 
 void SceneManager::initBuffers()
 {
     //create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 0.1));
-	spheres.push_back(create_sphere({0.8,0,-1.5}, 1, create_material({0,1,0}, 30, 0.0)));
-	spheres.push_back(create_sphere({ 1, 0.25, 1.5}, 0.3, create_material({ 0,1,0 }, 30, 0.0)));
+	//spheres.push_back(create_sphere({0.8,0,-1.5}, 1, create_material({0,1,0}, 30, 0.0)));
+	//spheres.push_back(create_sphere({ 1, 0.25, 1.5}, 0.3, create_material({ 0,1,0 }, 30, 0.0)));
+	//spheres.push_back(create_sphere({ 12, 0.25, 1.5 }, 0.3, create_material({ 0,1,0 }, 30, 0.0)));
 	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 0, 0.7));
 
 	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
@@ -277,7 +270,10 @@ void SceneManager::initBuffers()
 	//spheres.push_back(sp);
 
 	//lights.push_back(create_light(ambient, 0.2f, { 1,1,1 }, { 0 }, { 0 }));
-	//lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 2, 3, 0 }, { 0 }));
+	//lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 0.8,0,-1.5 }, { 0 }));
+	//lights.push_back(create_light(point, 15.0f, { 1,1.0,1.0 }, { -8.0,0,-1.5 }, { 0 }));
+	// lights.push_back(create_light(point, 15.0f, { 1,1.0,1.0 }, { 10.0,0,-1.5 }, { 0 }));
+	// lights.push_back(create_light(point, 15.0f, { 1,1.0,1.0 }, { 0.0,0,11.5 }, { 0 }));
     //lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 2, -5, 0 }, { 0 }));
 	//lights.push_back(create_light(direct, 2.2f, { 1,1,1 }, { 0 }, { -1,-4,-4 }));
 
@@ -289,12 +285,12 @@ void SceneManager::initBuffers()
     plainMat.diffuse = 0.7;
     plainMat.kd = 0.8;
     plainMat.ks = 0.2;*/
-	plains.push_back(create_plain({0,1,0}, {0,-6,0}, create_material({1,1,1}, 50, 0.1)));
-	plains.push_back(create_plain({0,-1,0}, {0,6,0}, create_material({1,1,1}, 50, 0.1)));
-	plains.push_back(create_plain({0,0,-1}, {0,0,6}, create_material({1,1,1}, 50, 0.1)));
-	plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
-	plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
-	plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));
+	// plains.push_back(create_plain({0,1,0}, {0,-6,0}, create_material({1,1,1}, 50, 0.1)));
+	// plains.push_back(create_plain({0,-1,0}, {0,6,0}, create_material({1,1,1}, 50, 0.1)));
+	// plains.push_back(create_plain({0,0,-1}, {0,0,6}, create_material({1,1,1}, 50, 0.1)));
+	// plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
+	// plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
+	// plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));
 
     // spheres.push_back(create_sphere({ 0,-1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
     // spheres.push_back(create_sphere({ 0, 1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
@@ -303,7 +299,7 @@ void SceneManager::initBuffers()
     // spheres.push_back(create_sphere({0, 0, 1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
     // spheres.push_back(create_sphere({0, 0, -1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
 
-	scene = create_scene(wind_width, wind_height, spheres.size(), lights.size(), plains.size());
+	//scene = create_scene(wind_width, wind_height);
 
 	glGenBuffers(1, &sceneUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
@@ -313,14 +309,20 @@ void SceneManager::initBuffers()
 
 	glGenBuffers(1, &sphereUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_sphere) * scene.spheres.size(), scene.spheres.data(), GL_STATIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 1, sphereUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	glGenBuffers(1, &plainUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, plainUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_plain) * plains.size(), plains.data(), GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_plain) * scene.plains.size(), scene.plains.data(), GL_STATIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 2, plainUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glGenBuffers(1, &lightUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light) * scene.lights.size(), scene.lights.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	// for (int i = 0; i < spheres.size(); i++)
@@ -359,21 +361,21 @@ void SceneManager::updateBuffers() const
 	memcpy(scene_p, &scene, sizeof(rt_scene));
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 
-    // if (!spheres.empty())
-    // {
-    //     glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereUbo);
-	   //  GLvoid* spheres_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-	   //  memcpy(spheres_p, spheres.data(), sizeof(rt_sphere) * spheres.size());
-	   //  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    // }
-    //
-    // if (!plains.empty())
-    // {
-    //     glBindBuffer(GL_SHADER_STORAGE_BUFFER, plainSsbo);
-	   //  GLvoid* plains_p = glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-	   //  memcpy(plains_p, plains.data(), sizeof(rt_plain) * plains.size());
-	   //  glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    // }
+    if (!scene.spheres.empty())
+    {
+        glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
+	    GLvoid* spheres_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	    memcpy(spheres_p, scene.spheres.data(), sizeof(rt_sphere) * scene.spheres.size());
+	    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    }
+    
+    if (!scene.plains.empty())
+    {
+        glBindBuffer(GL_UNIFORM_BUFFER, plainUbo);
+	    GLvoid* plains_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	    memcpy(plains_p, scene.plains.data(), sizeof(rt_plain) * scene.plains.size());
+	    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    }
 }
 
 vec3 SceneManager::getColor(float r, float g, float b)
