@@ -77,39 +77,22 @@ struct rt_scene {
 
 struct hit_record {
 	rt_material mat;
-  	//vec3 pt;
   	vec3 n;
-  	//float t;
 };
 
 #define SPHERE_SIZE {SPHERE_SIZE}
 #define PLAIN_SIZE {PLAIN_SIZE}
 #define LIGHT_SIZE {LIGHT_SIZE}
-// #define SPHERE_SIZE 1
-// #define PLAIN_SIZE 6
-// #define LIGHT_SIZE 1
 
 layout( std140, binding=0 ) uniform scene_buf
 {
     rt_scene scene;
 };
 
-// layout( std140, binding=1 ) uniform sphere_buf
-// {
-//     rt_sphere spheres[SPHERE_SIZE];
-// };
 layout( std140, binding=1 ) uniform sphere_buf
 {
     rt_sphere spheres[SPHERE_SIZE];
 };
-
-//uniform rt_sphere[SPHERE_SIZE] spheres;
-//uniform vec4[SPHERE_SIZE] spheres_;
-
-// layout( std430, binding=2 ) readonly buffer spheres_buf
-// {
-//     rt_sphere spheress[ ];
-// };
 
 layout( std140, binding=2 ) uniform plains_buf
 {
@@ -120,12 +103,6 @@ layout( std140, binding=3 ) uniform lights_buf
 {
     rt_light lights[LIGHT_SIZE];
 };
-
-//uniform readonly int sphere_count;
-
-// layout(binding=5) uniform UBO {
-// 	int sphere_count;
-// };
 
 #if DBG
 bool dbgEd = false;
@@ -272,7 +249,7 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 
 #define light_counts 1
 
-vec3 LightPixel2 (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
+vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
 {
 	float dist, distDiv;
 	vec3 lcol,l;
@@ -380,7 +357,7 @@ vec3 getReflection(vec3 ro,vec3 rd)
 	if(tm < maxDist) {
 		pt = ro + rd * tm;
 		hr = get_hit_info(pt, num, type);
-		color = LightPixel2(dot(rd, hr.n) < 0 ? pt + hr.n * eps : pt - hr.n * eps, rd, hr.mat.color, hr.mat.diffuse, hr.n, hr.mat.specular, true, hr.mat.kd, hr.mat.ks);
+		color = calcShade(dot(rd, hr.n) < 0 ? pt + hr.n * eps : pt - hr.n * eps, rd, hr.mat.color, hr.mat.diffuse, hr.n, hr.mat.specular, true, hr.mat.kd, hr.mat.ks);
 	}
 	return color;
 }
@@ -502,13 +479,13 @@ void main()
 			if(mat.x > 0.0) // Reflective
 			{
 				ro = pt + n * eps;
-				color += LightPixel2(ro, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
+				color += calcShade(ro, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
             {
-				color += LightPixel2(pt + n * eps, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks) * mask;
+				color += calcShade(pt + n * eps, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks) * mask;
                 break;
             }
 			
