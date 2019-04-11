@@ -82,12 +82,12 @@ struct hit_record {
   	//float t;
 };
 
-// #define SPHERE_SIZE {SPHERE_SIZE}
-// #define PLAIN_SIZE {PLAIN_SIZE}
-// #define LIGHT_SIZE {LIGHT_SIZE}
-#define SPHERE_SIZE 1
-#define PLAIN_SIZE 6
-#define LIGHT_SIZE 1
+#define SPHERE_SIZE {SPHERE_SIZE}
+#define PLAIN_SIZE {PLAIN_SIZE}
+#define LIGHT_SIZE {LIGHT_SIZE}
+// #define SPHERE_SIZE 1
+// #define PLAIN_SIZE 6
+// #define LIGHT_SIZE 1
 
 layout( std140, binding=0 ) uniform scene_buf
 {
@@ -359,27 +359,29 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
     #endif
 }
 
+hit_record get_hit_info(vec3 pt, int num, int type) {
+	hit_record hr;
+	if (type == 1) {
+		hr = hit_record(spheres[num].mat, normalize(pt - spheres[num].obj.xyz));
+	}
+	if (type == 2) {
+		hr = hit_record(plains[num].mat, normalize(plains[num].normal));
+	}
+	return hr;
+}
+
 vec3 getReflection(vec3 ro,vec3 rd)
 {
 	vec3 color = vec3(0);
-	vec3 col,pt,n;
-    vec2 mat;
-	vec4 ob;
-	// if(calcInter(ro,rd,ob,col,mat))
-	// {
-	// 	bool outside = dot(rd, n) < 0;
-	// 	color = LightPixel2(outside ? pt + n * eps : pt - n * eps,rd,col,0.7,outside?n:-n,30, true, 0.8, 0.2);
-	// }
-	// return color;
-
-	// float tm = calcInter(ro,rd,ob,col,mat);
-	// if(tm < maxDist)
-	// {
-	// 	vec3 pt = ro + rd*tm;
-	// 	vec3 n = normalize(pt - ob.xyz);
-	// 	bool outside = dot(rd, n) < 0;
-	// 	color = calcShade(outside ? pt + n * eps : pt - n * eps,ob,col,mat,n);
-	// }
+	vec3 pt;
+	int num, type;
+	float tm = calcInter(ro,rd,num,type);
+	hit_record hr;
+	if(tm < maxDist) {
+		pt = ro + rd * tm;
+		hr = get_hit_info(pt, num, type);
+		color = LightPixel2(dot(rd, hr.n) < 0 ? pt + hr.n * eps : pt - hr.n * eps, rd, hr.mat.color, hr.mat.diffuse, hr.n, hr.mat.specular, true, hr.mat.kd, hr.mat.ks);
+	}
 	return color;
 }
 
@@ -410,16 +412,7 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 // 	return result;
 // }
 
-hit_record get_hit_info(vec3 pt, int num, int type) {
-	hit_record hr;
-	if (type == 1) {
-		hr = hit_record(spheres[num].mat, normalize(pt - spheres[num].obj.xyz));
-	}
-	if (type == 2) {
-		hr = hit_record(plains[num].mat, normalize(plains[num].normal));
-	}
-	return hr;
-}
+
 
 void main()
 {
@@ -448,10 +441,10 @@ void main()
 	float absorbDistance = 0.0;
 	int type = 0;
 	int num;
+	hit_record hr;
 	
 	for(int i = 0; i < iterations; i++)
 	{
-		hit_record hr;
 		tm = calcInter(ro,rd,num,type);
 		if(tm < maxDist)
 		{
@@ -467,8 +460,8 @@ void main()
 			#if TOTAL_INTERNAL_REFLECTION
 			//float reflIdx = mat.y > 0 ? mat.y : REFRACTIVE_INDEX_AIR;
 			if (mat.y > 0) 
-				reflectMultiplier = FresnelReflectAmount( outside ? REFRACTIVE_INDEX_AIR : mat.y,
-													  	  outside ? mat.y : REFRACTIVE_INDEX_AIR,
+				reflectMultiplier = FresnelReflectAmount( outside ? 1 : mat.y,
+													  	  outside ? mat.y : 1,
 											 		      rd, n, mat.x);
 			else reflectMultiplier = getFresnel(n,rd,mat.x);
 			#else
@@ -478,34 +471,31 @@ void main()
 
 			if(mat.y > 0.0) // Refractive
 			{
-				if (outside)
+				if (outside && mat.x > 0)
 				{
 					//todo: если прозрачный объект будет внутри другого прозр.объекта, такое не прокатит (absorb = 0)
 					//сделать многоуровневый absorbDistance
 					absorbDistance = 0.0;
 					refl = reflect(rd, n);
-					refCol = getReflection(outside ? pt + n * eps : pt - n * eps, refl);
+					refCol = getReflection(pt + n * eps, refl);
 					color += refCol * reflectMultiplier * mask;
 					mask *= refractMultiplier;
 				}
-				#define absorba vec3(5,4,3)
-				#define mat_diff 0.7
-				else {
+				else if (!outside) {
 					absorbDistance += tm;    
-        			vec3 absorb = exp(-absorba * absorbDistance);
+        			vec3 absorb = exp(-mat.absorb * absorbDistance);
 					mask *= absorb;
 				}
 				#if TOTAL_INTERNAL_REFLECTION
 				//todo: не делать break, вместо этого сделать rd = reflect(..)
 				if (reflectMultiplier >= 1)
-				 	break;
+					break;
 				#endif
-				ro = outside ? pt - n * eps : pt + n * eps;
+				ro = pt - n * eps;
 				#if CUSTOM_REFRACT
-				rd = refract_c(rd, n, mat.y);
+				rd = refract_c(rd, outside ? n : -n, mat.y);
 				#else
-				float refractCoeff = outside ? REFRACTIVE_INDEX_AIR / mat.y : mat.y / REFRACTIVE_INDEX_AIR;
-				rd = refract(rd, outside ? n : -n, refractCoeff);
+				rd = refract(rd, n, outside ? 1 / mat.y : mat.y);
 				#endif
 			}
 			else 
