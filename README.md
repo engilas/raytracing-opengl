@@ -1,16 +1,16 @@
 ### RayTracing implemented with OpenGL fragment shader
 
-Controls:
+#### Controls:
 
 Rotate camera with mouse
 
 Movement:
 
-WASD
-Space - up
-Ctrl - down
-Shift (hold) - boost
-Alt (hold) - slowdown
+- WASD
+- Space - up
+- Ctrl - down
+- Shift (hold) - boost
+- Alt (hold) - slowdown
 
 #### Requirements
 
