@@ -1,4 +1,8 @@
-### RayTracing implemented with OpenGL fragment shader
+### RayTracing OpenGL
+
+Implemented with OpenGL fragment shaders.
+
+Scene setup in main.cpp source file.
 
 #### Controls:
 
