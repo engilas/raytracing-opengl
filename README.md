@@ -1,6 +1,7 @@
 ### RayTracing implemented with OpenGL fragment shader
 
 Controls:
+
 Rotate camera with mouse
 
 Movement:
