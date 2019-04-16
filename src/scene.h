@@ -8,6 +8,7 @@ struct rt_defines
 	int sphere_size;
 	int plain_size;
 	int light_size;
+	vec3 ambient_color;
 };
 
 typedef struct {
@@ -85,6 +86,7 @@ typedef struct
 struct scene_container
 {
 	rt_scene scene;
+	vec3 ambient_color;
 	std::vector<rt_sphere> spheres;
 	std::vector<rt_plain> plains;
 	std::vector<rt_light> lights;
@@ -92,6 +94,6 @@ struct scene_container
 
 	rt_defines get_defines()
 	{
-		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights.size())};
+		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights.size()), ambient_color};
 	}
 };

@@ -83,6 +83,7 @@ struct hit_record {
 #define SPHERE_SIZE {SPHERE_SIZE}
 #define PLAIN_SIZE {PLAIN_SIZE}
 #define LIGHT_SIZE {LIGHT_SIZE}
+#define AMBIENT_COLOR {AMBIENT_COLOR}
 
 layout( std140, binding=0 ) uniform scene_buf
 {
@@ -99,10 +100,12 @@ layout( std140, binding=2 ) uniform plains_buf
     rt_plain plains[PLAIN_SIZE];
 };
 
+#if LIGHT_SIZE != 0
 layout( std140, binding=3 ) uniform lights_buf
 {
     rt_light lights[LIGHT_SIZE];
 };
+#endif
 
 #if DBG
 bool dbgEd = false;
@@ -256,7 +259,8 @@ vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPowe
 	vec3 diffuse = vec3(0);
 	vec3 specular = vec3(0);
 
-	vec3 pixelColor = vec3(0);
+	vec3 pixelColor = AMBIENT_COLOR * col;
+	#if LIGHT_SIZE != 0
 	//return vec3(1);
 	//if(diffuse > 0.0) //If its not a light
 
@@ -264,11 +268,6 @@ vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPowe
 	{
 		for (int i = 0; i < LIGHT_SIZE; i++) {
 			lcol = lights[i].color;
-
-			if (lights[i].type == LIGHT_AMBIENT) {
-				pixelColor += lights[i].intensity * col * lcol;
-				continue;
-			}
 			if (lights[i].type == LIGHT_POINT) {
 				l = lights[i].pos - pt;
 				dist = length(l);
@@ -289,17 +288,19 @@ vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPowe
 			if (doShadow) 
 				lcol *= inShadow(pt, l, dist) ? 0 : 1;
 			#endif
-			diffuse += lcol * col * albedo * 35 / distDiv;
+			diffuse += lcol * col * albedo * lights[i].intensity / distDiv;
 			
 			//specular
 			if (specPower > 0) {
 				vec3 reflection = reflect(l, n);
 				float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
-				specular += lcol * pow(specDp, specPower) * 15 / distDiv;
+				specular += lcol * pow(specDp, specPower) * lights[i].intensity / distDiv;
 			}
 		}
-		pixelColor = diffuse * kd + specular * ks;
+		pixelColor += diffuse * kd + specular * ks;
 	} //else return col;
+	#endif
+	
 	return pixelColor;
 }
 

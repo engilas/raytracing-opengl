@@ -6,4 +6,9 @@ struct vec4 {
 
 struct vec3 {
 	float x, y, z;
+
+	std::string toString() const
+	{
+		return std::string().append("vec3(").append(std::to_string(x)).append(",").append(std::to_string(y)).append(",").append(std::to_string(z)).append(")");
+	}
 };
