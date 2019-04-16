@@ -92,20 +92,30 @@ layout( std140, binding=0 ) uniform scene_buf
 
 layout( std140, binding=1 ) uniform sphere_buf
 {
+	#if SPHERE_SIZE != 0
     rt_sphere spheres[SPHERE_SIZE];
+	#else
+	rt_sphere spheres[0];
+	#endif
 };
 
 layout( std140, binding=2 ) uniform plains_buf
 {
+	#if PLAIN_SIZE != 0
     rt_plain plains[PLAIN_SIZE];
+	#else
+	rt_plain plains[1];
+	#endif
 };
 
-#if LIGHT_SIZE != 0
 layout( std140, binding=3 ) uniform lights_buf
 {
+	#if LIGHT_SIZE != 0
     rt_light lights[LIGHT_SIZE];
+	#else
+	rt_light lights[1];
+	#endif
 };
-#endif
 
 #if DBG
 bool dbgEd = false;
@@ -168,17 +178,24 @@ vec3 Rotate(vec4 q, vec3 v)
 	return result;
 }
 
-vec3 getRayDir(ivec2 pixel_coords)
+vec3 getRayDir(ivec2 fragCoord)
 {
-	int x = int (pixel_coords.x - scene.canvas_width / 2.0);
-	int y = int (pixel_coords.y - scene.canvas_height / 2.0);
-
-	vec3 result = vec3(
-		x * scene.viewport_width / scene.canvas_width,
-	 	y * scene.viewport_height / scene.canvas_height,
-	 	scene.viewport_dist);
-	return normalize(Rotate(scene.quat_camera_rotation, result));
+  vec2 uv = (fragCoord.xy / vec2(scene.canvas_width, scene.canvas_height) )*2.0 - 1.0;
+  uv.x *= scene.canvas_width/scene.canvas_height;                   
+  return normalize(vec3(uv, 1));
 }
+
+// vec3 getRayDir(ivec2 pixel_coords)
+// {
+// 	int x = int (pixel_coords.x - scene.canvas_width / 2.0);
+// 	int y = int (pixel_coords.y - scene.canvas_height / 2.0);
+
+// 	vec3 result = vec3(
+// 		x * scene.viewport_width / scene.canvas_width,
+// 	 	y * scene.viewport_height / scene.canvas_height,
+// 	 	scene.viewport_dist);
+// 	return normalize(Rotate(scene.quat_camera_rotation, result));
+// }
 
 bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 {

@@ -26,16 +26,18 @@ int main()
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
 	scene.ambient_color = vec3{0, 0, 0};
-	scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, 3.5 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.1)));
-	scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, -4 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.05, 1.125, {4,2, 0.5})));
-	scene.lights.push_back(SceneManager::create_light(point, 25.0f, { 1.0,1.0,1.0 }, { 0.8,4,0 }, { 0 }));
-	scene.lights.push_back(SceneManager::create_light(point, 10.0f, { 1.0,1.0,1.0 }, { 0.8,-4,0 }, { 0 }));
-	scene.plains.push_back(SceneManager::create_plain({ 0,1,0 }, { 0,-6,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	//scene.plains.push_back(SceneManager::create_plain({ 0,-1,0 }, { 0,6,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1, 0, {}, 0.7, 0.2)));
-	scene.plains.push_back(SceneManager::create_plain({ 0,0,-1 }, { 0,0,6 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	scene.plains.push_back(SceneManager::create_plain({ 0,0,1 }, { 0,0,-6 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	scene.plains.push_back(SceneManager::create_plain({ 1,0,0 }, { -6,0,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	scene.plains.push_back(SceneManager::create_plain({ -1,0,0 }, { 6,0,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
+
+
+	// scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, 3.5 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.1)));
+	// scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, -4 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.05, 1.125, {4,2, 0.5})));
+	// scene.lights.push_back(SceneManager::create_light(point, 25.0f, { 1.0,1.0,1.0 }, { 0.8,4,0 }, { 0 }));
+	// scene.lights.push_back(SceneManager::create_light(direct, 0.2f, { 1.0,1.0,1.0 }, {}, { 0, -1, 0.2 }));
+	// scene.plains.push_back(SceneManager::create_plain({ 0,1,0 }, { 0,-6,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
+	// //scene.plains.push_back(SceneManager::create_plain({ 0,-1,0 }, { 0,6,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1, 0, {}, 0.7, 0.2)));
+	// scene.plains.push_back(SceneManager::create_plain({ 0,0,-1 }, { 0,0,6 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
+	// scene.plains.push_back(SceneManager::create_plain({ 0,0,1 }, { 0,0,-6 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
+	// scene.plains.push_back(SceneManager::create_plain({ 1,0,0 }, { -6,0,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
+	// scene.plains.push_back(SceneManager::create_plain({ -1,0,0 }, { 6,0,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
 
 	glWrapper.init_shaders(scene.get_defines());
 
