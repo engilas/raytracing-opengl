@@ -221,13 +221,22 @@ rt_plain SceneManager::create_plain(vec3 normal, vec3 pos, rt_material material)
     return plain;
 }
 
-rt_light SceneManager::create_light(lightType type, float intensity, vec3 color, vec3 position, vec3 direction)
+rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float intensity)
 {
-	rt_light light = {};
+	rt_light_point light = {};
 
-	light.type = type;
 	light.intensity = intensity;
 	light.pos = position;
+	light.color = color;
+
+	return light;
+}
+
+rt_light_direct SceneManager::create_light_direct(vec3 direction, vec3 color, float intensity)
+{
+	rt_light_direct light = {};
+
+	light.intensity = intensity;
 	light.direction = direction;
 	light.color = color;
 
@@ -319,10 +328,16 @@ void SceneManager::initBuffers()
 	glBindBufferBase(GL_UNIFORM_BUFFER, 2, plainUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	glGenBuffers(1, &lightUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, lightUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light) * scene.lights.size(), scene.lights.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightUbo);
+	glGenBuffers(1, &lightPointUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightPointUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light_point) * scene.lights_point.size(), scene.lights_point.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightPointUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glGenBuffers(1, &lightDirectUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, lightDirectUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light_direct) * scene.lights_direct.size(), scene.lights_direct.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightDirectUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	// for (int i = 0; i < spheres.size(); i++)

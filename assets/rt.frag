@@ -50,14 +50,18 @@ struct rt_plain {
 	vec3 normal;
 };
 
-struct rt_light {
-	vec3 pos;
+struct rt_light_direct {
 	vec3 direction;
 	vec3 color;
 
-	int type;
 	float intensity;
-	float radius;
+};
+
+struct rt_light_point {
+	vec4 pos; //pos + radius
+	vec3 color;
+
+	float intensity;
 };
 
 struct rt_scene {
@@ -82,7 +86,8 @@ struct hit_record {
 
 #define SPHERE_SIZE {SPHERE_SIZE}
 #define PLAIN_SIZE {PLAIN_SIZE}
-#define LIGHT_SIZE {LIGHT_SIZE}
+#define LIGHT_DIRECT_SIZE {LIGHT_DIRECT_SIZE}
+#define LIGHT_POINT_SIZE {LIGHT_POINT_SIZE}
 #define AMBIENT_COLOR {AMBIENT_COLOR}
 
 layout( std140, binding=0 ) uniform scene_buf
@@ -95,7 +100,7 @@ layout( std140, binding=1 ) uniform sphere_buf
 	#if SPHERE_SIZE != 0
     rt_sphere spheres[SPHERE_SIZE];
 	#else
-	rt_sphere spheres[0];
+	rt_sphere spheres[1];
 	#endif
 };
 
@@ -108,12 +113,21 @@ layout( std140, binding=2 ) uniform plains_buf
 	#endif
 };
 
-layout( std140, binding=3 ) uniform lights_buf
+layout( std140, binding=3 ) uniform lights_point_buf
 {
-	#if LIGHT_SIZE != 0
-    rt_light lights[LIGHT_SIZE];
+	#if LIGHT_POINT_SIZE != 0
+    rt_light_point lights_point[LIGHT_POINT_SIZE];
 	#else
-	rt_light lights[1];
+	rt_light_point lights_point[1];
+	#endif
+};
+
+layout( std140, binding=4 ) uniform lights_direct_buf
+{
+	#if LIGHT_DIRECT_SIZE != 0
+    rt_light_direct lights_direct[LIGHT_DIRECT_SIZE];
+	#else
+	rt_light_direct lights_direct[1];
 	#endif
 };
 
@@ -267,7 +281,24 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	return ret;
 }
 
-#define light_counts 1
+void calcShade2(vec3 l, vec3 lcol, float intensity, vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float dist, float distDiv, inout vec3 diffuse, inout vec3 specular) {
+	l = normalize(l);
+	// diffuse
+	float dp = clamp(dot(n, l), 0.0, 1.0);
+	lcol *= dp;
+	#if SHADOW_ENABLED
+	if (doShadow) 
+		lcol *= inShadow(pt, l, dist) ? 0 : 1;
+	#endif
+	diffuse += lcol * col * albedo * intensity / distDiv;
+	
+	//specular
+	if (specPower > 0) {
+		vec3 reflection = reflect(l, n);
+		float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
+		specular += lcol * pow(specDp, specPower) * intensity / distDiv;
+	}
+}
 
 vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
 {
@@ -277,47 +308,26 @@ vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPowe
 	vec3 specular = vec3(0);
 
 	vec3 pixelColor = AMBIENT_COLOR * col;
-	#if LIGHT_SIZE != 0
-	//return vec3(1);
-	//if(diffuse > 0.0) //If its not a light
 
 	//TODO:  разделить свет на 3 типа a, p, d  - каждый в своем буффере, итерировать по буфферу
-	{
-		for (int i = 0; i < LIGHT_SIZE; i++) {
-			lcol = lights[i].color;
-			if (lights[i].type == LIGHT_POINT) {
-				l = lights[i].pos - pt;
-				dist = length(l);
-				distDiv = 1 + dist*dist;
-			} 
-		 	if (lights[i].type == LIGHT_DIRECT) {
-			 	l = - lights[i].direction;
-			  	dist = maxDist;
-			  	distDiv = 1;
-			}
 
-			l = normalize(l);
-			
-			// diffuse
-			float dp = clamp(dot(n, l), 0.0, 1.0);
-			lcol *= dp;
-			#if SHADOW_ENABLED
-			if (doShadow) 
-				lcol *= inShadow(pt, l, dist) ? 0 : 1;
-			#endif
-			diffuse += lcol * col * albedo * lights[i].intensity / distDiv;
-			
-			//specular
-			if (specPower > 0) {
-				vec3 reflection = reflect(l, n);
-				float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
-				specular += lcol * pow(specDp, specPower) * lights[i].intensity / distDiv;
-			}
-		}
-		pixelColor += diffuse * kd + specular * ks;
-	} //else return col;
-	#endif
-	
+	for (int i = 0; i < LIGHT_POINT_SIZE; i++) {
+		lcol = lights_point[i].color;
+		l = lights_point[i].pos.xyz - pt;
+		dist = length(l);
+		distDiv = 1 + dist*dist;
+
+		calcShade2(l, lcol, lights_point[i].intensity, pt, rd, col, albedo, n, specPower, doShadow, dist, distDiv, diffuse, specular);
+	}
+	for (int i = 0; i < LIGHT_DIRECT_SIZE; i++) {
+		lcol = lights_direct[i].color;
+		l = - lights_direct[i].direction;
+		dist = maxDist;
+		distDiv = 1;
+
+		calcShade2(l, lcol, lights_direct[i].intensity, pt, rd, col, albedo, n, specPower, doShadow, dist, distDiv, diffuse, specular);
+	}
+	pixelColor += diffuse * kd + specular * ks;
 	return pixelColor;
 }
 

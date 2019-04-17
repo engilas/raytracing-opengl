@@ -10,7 +10,7 @@ static int wind_height = 160;
 
 int main()
 {
-#define FULLSCREEN 1
+#define FULLSCREEN 0
 
 #if FULLSCREEN
     GLWrapper glWrapper(true);
@@ -26,6 +26,8 @@ int main()
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
 	scene.ambient_color = vec3{0, 0, 0};
+
+	scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, -1.5}, 0.3, SceneManager::create_material({1,1,1}, 200, 1, 0, {}, 1)));
 
 
 	// scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, 3.5 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.1)));

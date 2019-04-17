@@ -7,7 +7,8 @@ struct rt_defines
 {
 	int sphere_size;
 	int plain_size;
-	int light_size;
+	int light_point_size;
+	int light_direct_size;
 	vec3 ambient_color;
 };
 
@@ -39,21 +40,34 @@ struct rt_plain {
 	vec3 normal; float __p2;
 };
 
-typedef enum { ambient, point, direct } lightType;
 typedef enum { sphere } primitiveType;
 
-typedef struct {
-	vec3 pos; float __p1;
-	vec3 direction; float __p2;
+// typedef struct {
+// 	vec3 pos; float __p1;
+// 	vec3 direction; float __p2;
+//
+//     vec3 color;
+//     lightType type;
+//
+// 	float intensity;
+//     float radius;
+//
+//     float __padding[2];
+// } rt_light;
 
-    vec3 color;
-    lightType type;
+struct rt_light_direct {
+	vec3 direction; float __p1;
+	vec3 color;
 
 	float intensity;
-    float radius;
+};
 
-    float __padding[2];
-} rt_light;
+struct rt_light_point {
+	vec4 pos; //pos + radius
+	vec3 color;
+
+	float intensity;
+};
 
 typedef struct {
     vec4 quat_camera_rotation;
@@ -89,11 +103,12 @@ struct scene_container
 	vec3 ambient_color;
 	std::vector<rt_sphere> spheres;
 	std::vector<rt_plain> plains;
-	std::vector<rt_light> lights;
+	std::vector<rt_light_point> lights_point;
+	std::vector<rt_light_direct> lights_direct;
 	std::vector<rotating_primitive> rotating_primitives;
 
 	rt_defines get_defines()
 	{
-		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights.size()), ambient_color};
+		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights_point.size()), static_cast<int>(lights_direct.size()), ambient_color};
 	}
 };
