@@ -1,4 +1,4 @@
-### RayTracing OpenGL
+### Realtime RayTracing OpenGL
 
 Implemented with OpenGL fragment shaders.
 
