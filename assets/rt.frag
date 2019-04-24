@@ -72,10 +72,6 @@ struct rt_scene {
 	int canvas_width;// uniform
 	int canvas_height;// uniform
 
-	float viewport_width;//remove
-	float viewport_height;//remove
-	float viewport_dist;//remove
-
 	int reflect_depth;//define
 };
 
@@ -192,24 +188,11 @@ vec3 Rotate(vec4 q, vec3 v)
 	return result;
 }
 
-vec3 getRayDir(ivec2 fragCoord)
+vec3 getRayDir(vec2 pixel_coords)
 {
-  vec2 uv = (fragCoord.xy / vec2(scene.canvas_width, scene.canvas_height) )*2.0 - 1.0;
-  uv.x *= scene.canvas_width/scene.canvas_height;                   
-  return normalize(vec3(uv, 1));
+	vec3 result = vec3((pixel_coords - vec2(scene.canvas_width, scene.canvas_height) / 2) / scene.canvas_height, 1);
+	return normalize(Rotate(scene.quat_camera_rotation, result));
 }
-
-// vec3 getRayDir(ivec2 pixel_coords)
-// {
-// 	int x = int (pixel_coords.x - scene.canvas_width / 2.0);
-// 	int y = int (pixel_coords.y - scene.canvas_height / 2.0);
-
-// 	vec3 result = vec3(
-// 		x * scene.viewport_width / scene.canvas_width,
-// 	 	y * scene.viewport_height / scene.canvas_height,
-// 	 	scene.viewport_dist);
-// 	return normalize(Rotate(scene.quat_camera_rotation, result));
-// }
 
 bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
 {
@@ -421,12 +404,12 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 
 void main()
 {
-	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
+	vec2 pixel_coords = gl_FragCoord.xy;
 	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height){
 		return;
 	}
 	#if AIM_ENABLED
-	if (pixel_coords == ivec2(scene.canvas_width / 2, scene.canvas_height / 2))
+	if (pixel_coords == vec2(scene.canvas_width / 2, scene.canvas_height / 2))
 	{
 		gl_FragColor = vec4(1);
 		return;

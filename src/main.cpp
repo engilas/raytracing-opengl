@@ -5,12 +5,12 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 
-static int wind_width = 160;
-static int wind_height = 160;
+static int wind_width = 660;
+static int wind_height = 960;
 
 int main()
 {
-#define FULLSCREEN 0
+#define FULLSCREEN 1
 
 #if FULLSCREEN
     GLWrapper glWrapper(true);
@@ -25,9 +25,12 @@ int main()
 	wind_height = glWrapper.getHeight();
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
-	scene.ambient_color = vec3{0, 0, 0};
+	scene.ambient_color = vec3{0.2, 0.2, 0.2};
 
-	scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, -1.5}, 0.3, SceneManager::create_material({1,1,1}, 200, 1, 0, {}, 1)));
+	scene.lights_point.push_back(SceneManager::create_light_point({0, 0, -1.5, 0.1}, {1,1,1}, 10));
+
+	scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, 1.5}, 0.3, SceneManager::create_material({1,1,1}, 200, 0, 0, {}, 1)));
+
 
 
 	// scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, 3.5 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.1)));

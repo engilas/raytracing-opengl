@@ -42,19 +42,6 @@ struct rt_plain {
 
 typedef enum { sphere } primitiveType;
 
-// typedef struct {
-// 	vec3 pos; float __p1;
-// 	vec3 direction; float __p2;
-//
-//     vec3 color;
-//     lightType type;
-//
-// 	float intensity;
-//     float radius;
-//
-//     float __padding[2];
-// } rt_light;
-
 struct rt_light_direct {
 	vec3 direction; float __p1;
 	vec3 color;
@@ -77,12 +64,8 @@ typedef struct {
 	int canvas_width;
 
 	int canvas_height;
-	float viewport_width;
-	float viewport_height;
-	float viewport_dist;
-
 	int reflect_depth;
-	float __padding[3];
+	float __padding[2];
 
     //float __padding[1];
 } rt_scene;

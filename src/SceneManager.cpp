@@ -245,16 +245,11 @@ rt_light_direct SceneManager::create_light_direct(vec3 direction, vec3 color, fl
 
 rt_scene SceneManager::create_scene(int width, int height)
 {
-	auto min = width > height ? height : width;
-
 	rt_scene scene = {};
 
 	scene.camera_pos = {};
 	scene.canvas_height = height;
 	scene.canvas_width = width;
-	scene.viewport_dist = 1;
-	scene.viewport_height = height / static_cast<float>(min);
-	scene.viewport_width = width / static_cast<float>(min);
 	scene.bg_color = { 0,0.0,0.0 };
 	scene.reflect_depth = 3;
 
@@ -263,53 +258,6 @@ rt_scene SceneManager::create_scene(int width, int height)
 
 void SceneManager::initBuffers()
 {
-    //create_sphere({2,0,4}, 1, create_material({0,1,0}, 30, 0.1));
-	//spheres.push_back(create_sphere({0.8,0,-1.5}, 1, create_material({0,1,0}, 30, 0.0)));
-	//spheres.push_back(create_sphere({ 1, 0.25, 1.5}, 0.3, create_material({ 0,1,0 }, 30, 0.0)));
-	//spheres.push_back(create_sphere({ 12, 0.25, 1.5 }, 0.3, create_material({ 0,1,0 }, 30, 0.0)));
-	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 1, 500, 0.3f, 0, 0.7));
-
-	//spheres.push_back(create_spheres({ 2,0,5 }, { 0,1,0 }, 2, 10, 0.2f, 0.2f, 5.4f));
-	//spheres.push_back(create_spheres({ -2,0,4 }, { 0,0,1 }, 2, 500, 0.3f, 0, 0));
-	//spheres.push_back(create_spheres({ 0,-1,3 }, { 1,0,0 }, 1, 500, 0.4f, 0, 0.7));
-	//spheres.push_back(create_spheres({ 0,-1001,3 }, { 1,1,1 }, 1000, 50, 0.05f, 0, 0.7));
-
-    //auto sp = create_spheres({ 0,0.8,1 }, { 0,0,0 }, 0.5, 500, 0.01f, 1.125, 0.7);
-    //sp.material.absorb = {3, 2, 0.2};
-	//spheres.push_back(sp);
-
-	//lights.push_back(create_light(ambient, 0.2f, { 1,1,1 }, { 0 }, { 0 }));
-	//lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 0.8,0,-1.5 }, { 0 }));
-	//lights.push_back(create_light(point, 15.0f, { 1,1.0,1.0 }, { -8.0,0,-1.5 }, { 0 }));
-	// lights.push_back(create_light(point, 15.0f, { 1,1.0,1.0 }, { 10.0,0,-1.5 }, { 0 }));
-	// lights.push_back(create_light(point, 15.0f, { 1,1.0,1.0 }, { 0.0,0,11.5 }, { 0 }));
-    //lights.push_back(create_light(point, 25.0f, {1.0,1.0,1.0}, { 2, -5, 0 }, { 0 }));
-	//lights.push_back(create_light(direct, 2.2f, { 1,1,1 }, { 0 }, { -1,-4,-4 }));
-
-	//spheres.push_back(create_spheres({ 0,0.5,0 }, getColor(66, 247, 136), 0.5, 50, 0.05f, 1.125, 0));
-	//rotating_primitives.push_back({ &spheres.back(), sphere, 9, 4, 0, 1 });
-
-    /*rt_material plainMat;
-    plainMat.color = {1,1,1};
-    plainMat.diffuse = 0.7;
-    plainMat.kd = 0.8;
-    plainMat.ks = 0.2;*/
-	// plains.push_back(create_plain({0,1,0}, {0,-6,0}, create_material({1,1,1}, 50, 0.1)));
-	// plains.push_back(create_plain({0,-1,0}, {0,6,0}, create_material({1,1,1}, 50, 0.1)));
-	// plains.push_back(create_plain({0,0,-1}, {0,0,6}, create_material({1,1,1}, 50, 0.1)));
-	// plains.push_back(create_plain({0,0,1}, {0,0,-6}, create_material({1,1,1}, 50, 0.1)));
-	// plains.push_back(create_plain({1,0,0}, {-6,0,0}, create_material({1,1,1}, 50, 0.1)));
-	// plains.push_back(create_plain({-1,0,0}, {6,0,0}, create_material({1,1,1}, 50, 0.1)));
-
-    // spheres.push_back(create_sphere({ 0,-1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    // spheres.push_back(create_sphere({ 0, 1006,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    // spheres.push_back(create_sphere({ 1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    // spheres.push_back(create_sphere({ -1006, 0,0 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    // spheres.push_back(create_sphere({0, 0, 1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
-    // spheres.push_back(create_sphere({0, 0, -1006 }, 1000, create_material({1,1,1}, 30, 0.1)));
-
-	//scene = create_scene(wind_width, wind_height);
-
 	glGenBuffers(1, &sceneUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_scene), NULL, GL_STATIC_DRAW);
@@ -339,38 +287,10 @@ void SceneManager::initBuffers()
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light_direct) * scene.lights_direct.size(), scene.lights_direct.data(), GL_STATIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightDirectUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	// for (int i = 0; i < spheres.size(); i++)
-	// {
-	// 	char element[50];
-	// 	sprintf_s(element, "spheres_[%d]", i);
-	// 	GLuint loc = glGetUniformLocation(wrapper->renderHandle, element);
-	// 	glUniform4f(loc, spheres[i].obj.x, spheres[i].obj.y, spheres[i].obj.z, spheres[i].obj.w);
-	// }
-
-	// glGenBuffers(1, &sphereUbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, sphereUbo);
-	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_sphere) * spheres.size(), spheres.data(), GL_STATIC_DRAW);
-	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sphereUbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
- //
- //    glGenBuffers(1, &plainSsbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, plainSsbo);
-	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_plain) * plains.size(), plains.data(), GL_STATIC_DRAW);
-	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, plainSsbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
- //
-	// glGenBuffers(1, &lightSsbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, lightSsbo);
-	// glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(rt_light) * lights.size(), lights.data(), GL_STATIC_DRAW);
-	// glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, lightSsbo);
-	// glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 }
 
 void SceneManager::updateBuffers() const
 {
-	//glUniform1i(glGetUniformLocation(wrapper->computeHandle, "sphere_count"), 8);
-
 	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
 	GLvoid* scene_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
 	memcpy(scene_p, &scene, sizeof(rt_scene));
