@@ -285,7 +285,7 @@ void SceneManager::initBuffers()
 	glGenBuffers(1, &lightDirectUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, lightDirectUbo);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light_direct) * scene.lights_direct.size(), scene.lights_direct.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightDirectUbo);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 4, lightDirectUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
