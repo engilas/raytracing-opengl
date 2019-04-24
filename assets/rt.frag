@@ -89,6 +89,7 @@ struct hit_record {
 #define LIGHT_DIRECT_SIZE {LIGHT_DIRECT_SIZE}
 #define LIGHT_POINT_SIZE {LIGHT_POINT_SIZE}
 #define AMBIENT_COLOR {AMBIENT_COLOR}
+#define ITERATIONS {ITERATIONS}
 
 layout( std140, binding=0 ) uniform scene_buf
 {
@@ -163,9 +164,7 @@ void _dbg(vec3 value)
 	#endif
 }
 
-const int iterations = 5;
 const float maxDist = 1000000.0;
-const vec3 amb = vec3(1.0);
 const float eps = 0.001;
 
 //const rt_material empty_mat = rt_material(vec3(0), vec3(0), 0, 0, 0, 0, 0, 0);
@@ -436,7 +435,7 @@ void main()
 	int num;
 	hit_record hr;
 	
-	for(int i = 0; i < iterations; i++)
+	for(int i = 0; i < ITERATIONS; i++)
 	{
 		tm = calcInter(ro,rd,num,type);
 		if(tm < maxDist)

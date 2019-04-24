@@ -9,6 +9,7 @@ struct rt_defines
 	int plain_size;
 	int light_point_size;
 	int light_direct_size;
+	int iterations;
 	vec3 ambient_color;
 };
 
@@ -92,6 +93,6 @@ struct scene_container
 
 	rt_defines get_defines()
 	{
-		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights_point.size()), static_cast<int>(lights_direct.size()), ambient_color};
+		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights_point.size()), static_cast<int>(lights_direct.size()), scene.reflect_depth, ambient_color};
 	}
 };
