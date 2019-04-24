@@ -14,6 +14,10 @@
 #define LIGHT_POINT 1
 #define LIGHT_DIRECT 2
 
+#define TYPE_SPHERE 0
+#define TYPE_PLAIN 1
+#define TYPE_POINT_LIGHT 2
+
 #define SHADOW_ENABLED 1
 #define DBG 0
 
@@ -164,6 +168,9 @@ const float maxDist = 1000000.0;
 const vec3 amb = vec3(1.0);
 const float eps = 0.001;
 
+//const rt_material empty_mat = rt_material(vec3(0), vec3(0), 0, 0, 0, 0, 0, 0);
+
+
 vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
 	vec4 result;
 
@@ -236,12 +243,17 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type)
 	float t;
 	for (int i = 0; i < PLAIN_SIZE; ++i) {
 		if (intersectPlain(ro,rd, plains[i].normal,plains[i].pos,tm,t)) {
-			num = i; tm = t; type = 2;
+			num = i; tm = t; type = TYPE_PLAIN;
 		}
 	}
 	for (int i = 0; i < SPHERE_SIZE; ++i) {
 		if (intersectSphere(ro,rd, spheres[i].obj,tm,t)) {
-			num = i; tm = t; type = 1;
+			num = i; tm = t; type = TYPE_SPHERE;
+		}
+	}
+	for (int i = 0; i < LIGHT_POINT_SIZE; ++i) {
+		if (intersectSphere(ro,rd, lights_point[i].pos,tm,t)) {
+			num = i; tm = t; type = TYPE_POINT_LIGHT;
 		}
 	}
 	
@@ -349,12 +361,15 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
 
 hit_record get_hit_info(vec3 pt, int num, int type) {
 	hit_record hr;
-	if (type == 1) {
+	if (type == TYPE_SPHERE) {
 		hr = hit_record(spheres[num].mat, normalize(pt - spheres[num].obj.xyz));
 	}
-	if (type == 2) {
+	if (type == TYPE_PLAIN) {
 		hr = hit_record(plains[num].mat, normalize(plains[num].normal));
 	}
+	// if (type == TYPE_POINT_LIGHT) {
+	// 	hr = hit_record(empty_mat, vec3(0));
+	// }
 	return hr;
 }
 
@@ -392,16 +407,6 @@ vec3 refract_c(vec3 I, vec3 N, float ior)
 	return k < 0.0 ? vec3(0.0) : eta * I + (eta * cosi - sqrt(k)) * n;
 }
 
-// vec3 getNormal(int type, vec4 ob, vec3 pt) {
-// 	vec3 result;
-// 	if (type == 1) {
-// 		result = normalize(pt - ob.xyz);
-// 	}
-// 	return result;
-// }
-
-
-
 void main()
 {
 	vec2 pixel_coords = gl_FragCoord.xy;
@@ -438,6 +443,12 @@ void main()
 		{
 			pt = ro + rd*tm;
 			hr = get_hit_info(pt, num, type);
+
+			if (type == TYPE_POINT_LIGHT) {
+				color += lights_point[num].color * mask;
+				break;
+			}
+
 			col = hr.mat.color;
 			mat= hr.mat;
 			n = hr.n;
