@@ -30,6 +30,7 @@
 // #define OBJECT_ABSORB  vec3(0.0, 5.0, 5.0) // for beers law
 #define AIM_ENABLED 1
 #define PLANE_ONESIDE 1
+#define REFLECT_REDUCE_ITERATION 1
 
 struct rt_material {
 	vec3 color;
@@ -378,6 +379,7 @@ vec3 getReflection(vec3 ro,vec3 rd)
 	vec3 pt;
 	int num, type;
 	float tm = calcInter(ro,rd,num,type);
+	if (type == TYPE_POINT_LIGHT) return lights_point[num].color;
 	hit_record hr;
 	if(tm < maxDist) {
 		pt = ro + rd * tm;
@@ -494,6 +496,9 @@ void main()
 				rd = refract_c(rd, outside ? n : -n, mat.y);
 				#else
 				rd = refract(rd, n, outside ? 1 / mat.y : mat.y);
+				#endif
+				#ifdef REFLECT_REDUCE_ITERATION
+				if (i == ITERATIONS - 1) i--;
 				#endif
 			}
 			else 

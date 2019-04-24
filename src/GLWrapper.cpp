@@ -170,7 +170,7 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 	if (!rvalue) {
 		fprintf(stderr, "Error in compiling fp\n");
 		//exit(31);
-		fprintf(stderr, "Error in compiling the compute shader\n");
+		fprintf(stderr, "Error in compiling the fragment shader\n");
 		GLchar log[10240];
 		GLsizei length;
 		glGetShaderInfoLog(fp, 10239, &length, log);

@@ -251,7 +251,7 @@ rt_scene SceneManager::create_scene(int width, int height)
 	scene.canvas_height = height;
 	scene.canvas_width = width;
 	scene.bg_color = { 0,0.0,0.0 };
-	scene.reflect_depth = 3;
+	scene.reflect_depth = 5;
 
 	return scene;
 }
