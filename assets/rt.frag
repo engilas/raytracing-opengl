@@ -471,9 +471,6 @@ void main()
 			{
 				if (outside && mat.x > 0)
 				{
-					//todo: если прозрачный объект будет внутри другого прозр.объекта, такое не прокатит (absorb = 0)
-					//сделать многоуровневый absorbDistance
-					absorbDistance = 0.0;
 					refl = reflect(rd, n);
 					refCol = getReflection(pt + n * eps, refl);
 					color += refCol * reflectMultiplier * mask;
@@ -496,11 +493,10 @@ void main()
 				rd = refract(rd, n, outside ? 1 / mat.y : mat.y);
 				#endif
 				#ifdef REFLECT_REDUCE_ITERATION
-				if (i == ITERATIONS - 1) i--;
+				i--;
 				#endif
 			}
-			else 
-			if(mat.x > 0.0) // Reflective
+			else if(mat.x > 0.0) // Reflective
 			{
 				ro = pt + n * eps;
 				color += calcShade(ro, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
@@ -508,11 +504,10 @@ void main()
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
-            {
+			{
 				color += calcShade(pt + n * eps, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks) * mask;
-                break;
-            }
-			
+				break;
+			}
 		} 
 		else {
 			color += scene.bg_color * mask;

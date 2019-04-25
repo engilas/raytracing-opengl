@@ -28,14 +28,15 @@ int main()
 	scene.shadow_ambient = vec3{0.7, 0.7, 0.7};
 	//scene.ambient_color = vec3{0.2, 0.2, 0.2};
 
-	scene.lights_point.push_back(SceneManager::create_light_point({0, 0, -1.5, 0.1}, {1,0.8,0}, 2.5));
-	scene.lights_point.push_back(SceneManager::create_light_point({0, 0.25, -1.5, 0.1}, {0,0.0,1}, 2.5));
+	scene.lights_point.push_back(SceneManager::create_light_point({0, 0, -1.5, 0.05}, {1,0.8,0}, 2.5));
+	scene.lights_point.push_back(SceneManager::create_light_point({0, 0.25, -1.5, 0.05}, {0,0.0,1}, 2.5));
 
 	//mirror
-	scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, -1.5}, 0.3, SceneManager::create_material({1,1,1}, 200, 1, 0, {}, 1)));
+	scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, -1.5}, 0.29, SceneManager::create_material({1,1,1}, 200, 1, 0, {}, 1)));
 	//transp
-	scene.spheres.push_back(SceneManager::create_sphere({0, -0.1, -1.5}, 0.3, SceneManager::create_material({1,1,1}, 200, 0.1, 1.125, {}, 1)));
-	//todo transp 2
+	//scene.spheres.push_back(SceneManager::create_sphere({0, -0.1, -1.5}, 1.3, SceneManager::create_material({1,1,1}, 200, 0.1, 1.125, {10, 10, 10}, 1)));
+	//transp 2
+	scene.spheres.push_back(SceneManager::create_sphere({0, -0.1, -1.5}, 0.15, SceneManager::create_material({1,1,1}, 200, 0.1, 1.125, {0, 10, 0}, 1)));
 	// scene.spheres.push_back(SceneManager::create_sphere({1001, 0, 0}, 1000, SceneManager::create_material({1,1,1}, 200, 0.1, 0.8, {}, 1)));
 	scene.plains.push_back(SceneManager::create_plain({1,0,0}, {-1,0,0}, SceneManager::create_material({0,1,0}, 200, 0)));
 	scene.plains.push_back(SceneManager::create_plain({-1,0,0}, {1,0,0}, SceneManager::create_material({1,0,0}, 200, 0)));
