@@ -11,6 +11,7 @@ struct rt_defines
 	int light_direct_size;
 	int iterations;
 	vec3 ambient_color;
+	vec3 shadow_ambient;
 };
 
 typedef struct {
@@ -41,7 +42,7 @@ struct rt_plain {
 	vec3 normal; float __p2;
 };
 
-typedef enum { sphere } primitiveType;
+typedef enum { sphere, light } primitiveType;
 
 struct rt_light_direct {
 	vec3 direction; float __p1;
@@ -71,20 +72,22 @@ typedef struct {
     //float __padding[1];
 } rt_scene;
 
-typedef struct
+struct rotating_primitive
 {
-	void* primitive;
+	int index;
 	primitiveType type;
+	vec4 pos;
 	float a;
 	float b;
 	float current;
 	float speed;
-} rotating_primitive;
+};
 
 struct scene_container
 {
 	rt_scene scene;
 	vec3 ambient_color;
+	vec3 shadow_ambient;
 	std::vector<rt_sphere> spheres;
 	std::vector<rt_plain> plains;
 	std::vector<rt_light_point> lights_point;
@@ -93,6 +96,6 @@ struct scene_container
 
 	rt_defines get_defines()
 	{
-		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights_point.size()), static_cast<int>(lights_direct.size()), scene.reflect_depth, ambient_color};
+		return {static_cast<int>(spheres.size()), static_cast<int>(plains.size()), static_cast<int>(lights_point.size()), static_cast<int>(lights_direct.size()), scene.reflect_depth, ambient_color, shadow_ambient};
 	}
 };

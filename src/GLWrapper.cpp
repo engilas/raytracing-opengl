@@ -149,6 +149,7 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 	replace(fpS, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
 	replace(fpS, "{ITERATIONS}", std::to_string(defines.iterations));
 	replace(fpS, "{AMBIENT_COLOR}", defines.ambient_color.toString());
+	replace(fpS, "{SHADOW_AMBIENT}", defines.shadow_ambient.toString());
 	//fpS.append('\0');
 	auto tmp = fpS.c_str();
 	source_len = fpS.size();

@@ -24,10 +24,7 @@
 #define MULTI_INTERSECTION 1
 #define CUSTOM_REFRACT 1
 #define TOTAL_INTERNAL_REFLECTION 1
-#define REFRACTIVE_INDEX_AIR 1.00029
 #define DO_FRESNEL 1
-// #define LIGHT_AMBIENT2 vec3(0.00)
-// #define OBJECT_ABSORB  vec3(0.0, 5.0, 5.0) // for beers law
 #define AIM_ENABLED 1
 #define PLANE_ONESIDE 1
 #define REFLECT_REDUCE_ITERATION 1
@@ -90,6 +87,7 @@ struct hit_record {
 #define LIGHT_DIRECT_SIZE {LIGHT_DIRECT_SIZE}
 #define LIGHT_POINT_SIZE {LIGHT_POINT_SIZE}
 #define AMBIENT_COLOR {AMBIENT_COLOR}
+#define SHADOW_AMBIENT {SHADOW_AMBIENT}
 #define ITERATIONS {ITERATIONS}
 
 layout( std140, binding=0 ) uniform scene_buf
@@ -283,7 +281,7 @@ void calcShade2(vec3 l, vec3 lcol, float intensity, vec3 pt, vec3 rd, vec3 col, 
 	lcol *= dp;
 	#if SHADOW_ENABLED
 	if (doShadow) 
-		lcol *= inShadow(pt, l, dist) ? 0 : 1;
+		lcol *= inShadow(pt, l, dist) ? SHADOW_AMBIENT : vec3(1,1,1);
 	#endif
 	diffuse += lcol * col * albedo * intensity / distDiv;
 	
@@ -310,7 +308,7 @@ vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPowe
 		lcol = lights_point[i].color;
 		l = lights_point[i].pos.xyz - pt;
 		dist = length(l);
-		distDiv = 1 + dist*dist;
+		distDiv = 1 + dist * dist;
 
 		calcShade2(l, lcol, lights_point[i].intensity, pt, rd, col, albedo, n, specPower, doShadow, dist, distDiv, diffuse, specular);
 	}

@@ -69,18 +69,25 @@ void SceneManager::ProcessRotations(float frameRate)
 	for (int i = 0; i < scene.rotating_primitives.size(); ++i)
 	{
 		auto rot = scene.rotating_primitives.data() + i;
+		rot->current += frameRate * rot->speed;
 		switch (rot->type)
 		{
-		case sphere:
-		{
-			auto sphere = static_cast<rt_sphere*>(rot->primitive);
-			rot->current += frameRate * rot->speed;
+			case sphere:
+			{
+				auto sphere = &scene.spheres[rot->index];
 
-			sphere->obj.x = rot->a * cos(rot->current);
-			sphere->obj.z = rot->b * sin(rot->current);
+				sphere->obj.x = rot->pos.x + rot->a * cos(rot->current);
+				sphere->obj.z = rot->pos.z + rot->b * sin(rot->current);
 
-			break;
-		}
+				break;
+			}
+			case light:
+			{
+				auto light = &scene.lights_point[rot->index];
+
+				light->pos.x = rot->pos.x + rot->a * cos(rot->current);
+				light->pos.z = rot->pos.z + rot->b * sin(rot->current);
+			}
 		}
 	}
 }
@@ -311,6 +318,13 @@ void SceneManager::updateBuffers() const
 	    memcpy(plains_p, scene.plains.data(), sizeof(rt_plain) * scene.plains.size());
 	    glUnmapBuffer(GL_UNIFORM_BUFFER);
     }
+	if (!scene.lights_point.empty())
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, lightPointUbo);
+	    GLvoid* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	    memcpy(ptr, scene.lights_point.data(), sizeof(rt_light_point) * scene.lights_point.size());
+	    glUnmapBuffer(GL_UNIFORM_BUFFER);
+	}
 }
 
 vec3 SceneManager::getColor(float r, float g, float b)

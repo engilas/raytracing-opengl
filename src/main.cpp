@@ -25,10 +25,11 @@ int main()
 	wind_height = glWrapper.getHeight();
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
+	scene.shadow_ambient = vec3{0.7, 0.7, 0.7};
 	//scene.ambient_color = vec3{0.2, 0.2, 0.2};
 
-	scene.lights_point.push_back(SceneManager::create_light_point({-0.8, 0, -1.5, 0.1}, {1,0.8,0}, 2.5));
-	scene.lights_point.push_back(SceneManager::create_light_point({0.8, 0.25, -1.5, 0.1}, {0,0.0,1}, 2.5));
+	scene.lights_point.push_back(SceneManager::create_light_point({0, 0, -1.5, 0.1}, {1,0.8,0}, 2.5));
+	scene.lights_point.push_back(SceneManager::create_light_point({0, 0.25, -1.5, 0.1}, {0,0.0,1}, 2.5));
 
 	//mirror
 	scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, -1.5}, 0.3, SceneManager::create_material({1,1,1}, 200, 1, 0, {}, 1)));
@@ -41,6 +42,9 @@ int main()
 	scene.plains.push_back(SceneManager::create_plain({0,1,0}, {0,-1,0}, SceneManager::create_material({1,1,1}, 200, 0.1)));
 	scene.plains.push_back(SceneManager::create_plain({0,-1,0}, {0,1,0}, SceneManager::create_material({1,1,1}, 200, 0.1)));
 	scene.plains.push_back(SceneManager::create_plain({0,0,1}, {0,0,-2}, SceneManager::create_material({1,1,1}, 200, 0.1)));
+
+	scene.rotating_primitives.push_back({0, light, scene.lights_point[0].pos, 0.4, 0.4, 0, 1.1});
+	scene.rotating_primitives.push_back({1, light, scene.lights_point[1].pos, 0.4, 0.4, 2, 1.4});
 
 
 
