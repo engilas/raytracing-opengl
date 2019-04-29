@@ -21,3 +21,7 @@ Movement:
 * CMake (>= 3.0.2)
 * GPU with OpenGL (>= 3.1) support
 * GLFW, should be automatically found by CMake.
+
+#### Screenshots
+
+![](media/animation.gif)
