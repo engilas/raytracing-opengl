@@ -23,6 +23,11 @@ class Quaternion
 
 public:
 
+	static Quaternion<_Tp> Identity()
+	{
+		return Quaternion<_Tp>(1, 0, 0, 0);
+	}
+
 	//Quaternion
 	// -default constructor
 	// -creates a new quaternion with all parts equal to zero

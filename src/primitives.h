@@ -12,3 +12,7 @@ struct vec3 {
 		return std::string().append("vec3(").append(std::to_string(x)).append(",").append(std::to_string(y)).append(",").append(std::to_string(z)).append(")");
 	}
 };
+
+struct vec2 {
+	float x, y;
+};

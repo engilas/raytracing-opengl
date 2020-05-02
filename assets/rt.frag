@@ -15,14 +15,14 @@
 #define LIGHT_DIRECT 2
 
 #define TYPE_SPHERE 0
-#define TYPE_PLAIN 1
-#define TYPE_POINT_LIGHT 2
+#define TYPE_PLANE 1
+#define TYPE_SURFACE 2
+#define TYPE_POINT_LIGHT 3
 
 #define SHADOW_ENABLED 1
 #define DBG 0
 
 #define MULTI_INTERSECTION 1
-#define CUSTOM_REFRACT 1
 #define TOTAL_INTERNAL_REFLECTION 1
 #define DO_FRESNEL 1
 #define AIM_ENABLED 1
@@ -46,10 +46,24 @@ struct rt_sphere {
 	vec4 obj;
 };
 
-struct rt_plain {
+struct rt_plane {
 	rt_material mat;
 	vec3 pos;
 	vec3 normal;
+};
+
+struct rt_surface {
+	rt_material mat;
+	vec4 quat_rotation;
+	vec3 v_min;
+	vec3 v_max;
+	vec3 pos;
+	float a; // x2
+	float b; // y2
+	float c; // z2
+	float d; // z
+	float e; // y
+	float f; // const	
 };
 
 struct rt_light_direct {
@@ -83,7 +97,8 @@ struct hit_record {
 };
 
 #define SPHERE_SIZE {SPHERE_SIZE}
-#define PLAIN_SIZE {PLAIN_SIZE}
+#define PLANE_SIZE {PLANE_SIZE}
+#define SURFACE_SIZE {SURFACE_SIZE}
 #define LIGHT_DIRECT_SIZE {LIGHT_DIRECT_SIZE}
 #define LIGHT_POINT_SIZE {LIGHT_POINT_SIZE}
 #define AMBIENT_COLOR {AMBIENT_COLOR}
@@ -104,12 +119,21 @@ layout( std140, binding=1 ) uniform sphere_buf
 	#endif
 };
 
-layout( std140, binding=2 ) uniform plains_buf
+layout( std140, binding=2 ) uniform planes_buf
 {
-	#if PLAIN_SIZE != 0
-    rt_plain plains[PLAIN_SIZE];
+	#if PLANE_SIZE != 0
+    rt_plane planes[PLANE_SIZE];
 	#else
-	rt_plain plains[1];
+	rt_plane planes[1];
+	#endif
+};
+
+layout( std140, binding=5 ) uniform surfaces_buf
+{
+	#if SURFACE_SIZE != 0
+    rt_surface surfaces[SURFACE_SIZE];
+	#else
+	rt_surface surfaces[1];
 	#endif
 };
 
@@ -163,6 +187,13 @@ void _dbg(vec3 value)
 	#endif
 }
 
+void swap(inout float a, inout float b)
+{
+	float tmp = a;
+	a = b;
+	b = tmp;
+}
+
 const float maxDist = 1000000.0;
 const float eps = 0.001;
 
@@ -180,23 +211,25 @@ vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
 	return result;
 }
 
-vec3 Rotate(vec4 q, vec3 v)
-{
-	vec4 qv = vec4(v, 0);
-
-	vec4 mult = multiplyQuaternion(q, qv);
+vec4 inverseQuaternion(vec4 q) {
 	float scale = 1 / (q.w * q.w + dot(q, q));
 	vec4 inverse = - scale * q;
 	inverse.w = scale * q.w;
-	vec3 result = vec3(multiplyQuaternion(mult, inverse));
+	return inverse;
+}
 
+vec3 rotate(vec4 q, vec3 v)
+{
+	vec4 qv = vec4(v, 0);
+	vec4 mult = multiplyQuaternion(q, qv);
+	vec3 result = vec3(multiplyQuaternion(mult, inverseQuaternion(q)));
 	return result;
 }
 
 vec3 getRayDir(vec2 pixel_coords)
 {
 	vec3 result = vec3((pixel_coords - vec2(scene.canvas_width, scene.canvas_height) / 2) / scene.canvas_height, 1);
-	return normalize(Rotate(scene.quat_camera_rotation, result));
+	return normalize(rotate(scene.quat_camera_rotation, result));
 }
 
 bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
@@ -218,7 +251,7 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
     return r;
 }
 
-bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
+bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
 	float denom = clamp(dot(n, rd), -1, 1); 
 	#ifdef PLANE_ONESIDE
 		if (denom < -1e-6) 
@@ -234,19 +267,117 @@ bool intersectPlain(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
     return false; 
 }
 
+bool isBetween(vec3 value, vec3 min, vec3 max) 
+{
+	return greaterThan(value, min) == bvec3(true) && lessThan(value, max) == bvec3(true);
+}
+
+bool checkSurfaceEdges(vec3 o, vec3 d, inout float tMin, inout float tMax, vec3 v_min, vec3 v_max, float epsilon)
+{
+	vec3 pt = d * tMin + o;
+	if (!isBetween(pt, v_min, v_max)) 
+	{
+		if (tMax < epsilon) return false;
+		pt = d * tMax + o;
+		if (!isBetween(pt, v_min, v_max))
+			return false;
+		swap(tMin, tMax);
+	}
+	return true;
+}
+
+bool intersectSurface(vec3 ro, vec3 rd, int num, float tm, out float t)
+{
+	vec3 orig_ro = ro;
+	vec3 orig_rd = rd;
+	rt_surface surface = surfaces[num];
+	ro = ro - surface.pos;
+	ro = rotate(surface.quat_rotation, ro);
+	rd = rotate(surface.quat_rotation, rd);
+
+	float a = surface.a;
+	float b = surface.b;
+	float c = surface.c;
+	float d = surface.d;
+	float e = surface.e;
+	float f = surface.f;
+
+	float d1 = rd.x;
+	float d2 = rd.y;
+	float d3 = rd.z;
+	float o1 = ro.x;
+	float o2 = ro.y;
+	float o3 = ro.z;
+
+	float p1 = 2 * a * d1 * o1 + 2 * b * d2 * o2 + 2 * c * d3 * o3 + d * d3 + d2 * e;
+	float p2 = a * d1 * d1 + b * d2 * d2 + c * d3 * d3;
+	float p3 = a * o1 * o1 + b * o2 * o2 + c * o3 * o3 + d * o3 + e * o2 + f;
+	float p4 = sqrt(p1 * p1 - 4 * p2 * p3);
+
+	//division by zero
+	if (abs(p2) < 1e-20)
+	{
+		t = -p3 / p1;
+		return t > tm;
+	}
+
+	float min = FLT_MAX;
+	float max = FLT_MAX;
+
+	float t1 = (-p1 - p4) / (2 * p2);
+	float t2 = (-p1 + p4) / (2 * p2);
+
+	float epsilon = 1e-4;
+
+	if (t1 > epsilon && t1 < min)
+	{
+		min = t1;
+		max = t2;
+	}
+
+	if (t2 > epsilon && t2 < min)
+	{
+		min = t2;
+		max = t1;
+	}
+
+	if (!checkSurfaceEdges(orig_ro, orig_rd, min, max, surface.v_min, surface.v_max, epsilon))
+		return false;
+
+	t = min;
+	return t < tm;
+}
+
+vec3 getSurfaceNormal(vec3 ro, vec3 rd, float t, int num) {
+	rt_surface surface = surfaces[num];
+	ro = ro - surface.pos;
+	ro = rotate(surface.quat_rotation, ro);
+	rd = rotate(surface.quat_rotation, rd);
+
+	vec3 tm = rd * t + ro;
+
+	vec3 normal = vec3(2 * surface.a * tm.x, 2 * surface.b * tm.y + surface.e, 2 * surface.c * tm.z + surface.d);
+	normal = rotate(inverseQuaternion(surface.quat_rotation), normal);
+	return normalize(normal);
+}
 
 float calcInter(vec3 ro, vec3 rd, out int num, out int type)
 {
 	float tm = maxDist;
 	float t;
-	for (int i = 0; i < PLAIN_SIZE; ++i) {
-		if (intersectPlain(ro,rd, plains[i].normal,plains[i].pos,tm,t)) {
-			num = i; tm = t; type = TYPE_PLAIN;
+	for (int i = 0; i < PLANE_SIZE; ++i) {
+		if (intersectPlane(ro,rd, planes[i].normal,planes[i].pos,tm,t)) {
+			num = i; tm = t; type = TYPE_PLANE;
 		}
 	}
 	for (int i = 0; i < SPHERE_SIZE; ++i) {
 		if (intersectSphere(ro,rd, spheres[i].obj,tm,t)) {
 			num = i; tm = t; type = TYPE_SPHERE;
+		}
+	}
+	for (int i = 0; i < SURFACE_SIZE; ++i) {
+		if (intersectSurface(ro, rd, i, tm, t)) {
+			num = i; tm = t; type = TYPE_SURFACE;
 		}
 	}
 	for (int i = 0; i < LIGHT_POINT_SIZE; ++i) {
@@ -266,8 +397,8 @@ bool inShadow(vec3 ro,vec3 rd,float d)
 	for (int i = 0; i < SPHERE_SIZE; ++i)
 		if(intersectSphere(ro,rd,spheres[i].obj,d,t)) {ret = true;}
 	#if PLANE_ONESIDE == 0
-	for (int i = 0; i < PLAIN_SIZE; ++i)
-		if(intersectPlain(ro,rd, plains[i].normal,plains[i].pos,d,t)) {ret = true;}
+	for (int i = 0; i < PLANE_SIZE; ++i)
+		if(intersectPlane(ro,rd, planes[i].normal,planes[i].pos,d,t)) {ret = true;}
 	#endif
 
 
@@ -301,8 +432,6 @@ vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPowe
 	vec3 specular = vec3(0);
 
 	vec3 pixelColor = AMBIENT_COLOR * col;
-
-	//TODO:  разделить свет на 3 типа a, p, d  - каждый в своем буффере, итерировать по буфферу
 
 	for (int i = 0; i < LIGHT_POINT_SIZE; i++) {
 		lcol = lights_point[i].color;
@@ -357,13 +486,16 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
     #endif
 }
 
-hit_record get_hit_info(vec3 pt, int num, int type) {
+hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type) {
 	hit_record hr;
 	if (type == TYPE_SPHERE) {
 		hr = hit_record(spheres[num].mat, normalize(pt - spheres[num].obj.xyz));
 	}
-	if (type == TYPE_PLAIN) {
-		hr = hit_record(plains[num].mat, normalize(plains[num].normal));
+	if (type == TYPE_PLANE) {
+		hr = hit_record(planes[num].mat, normalize(planes[num].normal));
+	}
+	if (type == TYPE_SURFACE) {
+		hr = hit_record(surfaces[num].mat, getSurfaceNormal(ro, rd, tm, num));
 	}
 	// if (type == TYPE_POINT_LIGHT) {
 	// 	hr = hit_record(empty_mat, vec3(0));
@@ -371,7 +503,7 @@ hit_record get_hit_info(vec3 pt, int num, int type) {
 	return hr;
 }
 
-vec3 getReflection(vec3 ro,vec3 rd)
+vec3 getReflection(vec3 ro, vec3 rd)
 {
 	vec3 color = vec3(0);
 	vec3 pt;
@@ -381,29 +513,10 @@ vec3 getReflection(vec3 ro,vec3 rd)
 	hit_record hr;
 	if(tm < maxDist) {
 		pt = ro + rd * tm;
-		hr = get_hit_info(pt, num, type);
+		hr = get_hit_info(ro, rd, pt, tm, num, type);
 		color = calcShade(dot(rd, hr.n) < 0 ? pt + hr.n * eps : pt - hr.n * eps, rd, hr.mat.color, hr.mat.diffuse, hr.n, hr.mat.specular, true, hr.mat.kd, hr.mat.ks);
 	}
 	return color;
-}
-
-void swap(inout float a, inout float b)
-{
-	float tmp = a;
-	a = b;
-	b = tmp;
-}
-
-vec3 refract_c(vec3 I, vec3 N, float ior)
-{
-	float cosi = clamp(dot(I, N), -1, 1);
-	float etai = 1, etat = ior;
-	vec3 n = N;
-	if (cosi < 0) { cosi = -cosi; }
-	else { swap(etai, etat); n = -N; }
-	float eta = etai / etat;
-	float k = 1 - eta * eta * (1 - cosi * cosi);
-	return k < 0.0 ? vec3(0.0) : eta * I + (eta * cosi - sqrt(k)) * n;
 }
 
 void main()
@@ -441,7 +554,7 @@ void main()
 		if(tm < maxDist)
 		{
 			pt = ro + rd*tm;
-			hr = get_hit_info(pt, num, type);
+			hr = get_hit_info(ro, rd, pt, tm, num, type);
 
 			if (type == TYPE_POINT_LIGHT) {
 				color += lights_point[num].color * mask;
@@ -482,16 +595,12 @@ void main()
 					mask *= absorb;
 				}
 				#if TOTAL_INTERNAL_REFLECTION
-				//todo: не делать break, вместо этого сделать rd = reflect(..)
+				//todo: rd = reflect(..) instead of break
 				if (reflectMultiplier >= 1)
 					break;
 				#endif
 				ro = pt - n * eps;
-				#if CUSTOM_REFRACT
-				rd = refract_c(rd, outside ? n : -n, mat.y);
-				#else
 				rd = refract(rd, n, outside ? 1 / mat.y : mat.y);
-				#endif
 				#ifdef REFLECT_REDUCE_ITERATION
 				i--;
 				#endif

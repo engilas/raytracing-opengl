@@ -97,14 +97,14 @@ void SceneManager::UpdateScene(float frameRate)
 	const float xAxis[3] = { 1, 0, 0 };
 	const float yAxis[3] = { 0, 1, 0 };
 	const float zAxis[3] = { 0, 0, 1 };
-
+	
 	Quaternion<float> qX(xAxis, -pitch * PI_F / 180.0f);
 	Quaternion<float> qY(yAxis, yaw * PI_F / 180.0f);
 	Quaternion<float> q = qY * qX;
 	scene.scene.quat_camera_rotation = q.GetStruct();
 
 
-	auto speed = frameRate;
+	auto speed = frameRate * 3;
 	if (shift_pressed)
 		speed *= 3;
 	if (alt_pressed)
@@ -219,13 +219,13 @@ rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material mat
 	return sphere;
 }
 
-rt_plain SceneManager::create_plain(vec3 normal, vec3 pos, rt_material material)
+rt_plane SceneManager::create_plane(vec3 normal, vec3 pos, rt_material material)
 {
-    rt_plain plain = {};
-    plain.normal = normal;
-    plain.pos = pos;
-    plain.material = material;
-    return plain;
+    rt_plane plane = {};
+    plane.normal = normal;
+    plane.pos = pos;
+    plane.material = material;
+    return plane;
 }
 
 rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float intensity)
@@ -277,10 +277,16 @@ void SceneManager::initBuffers()
 	glBindBufferBase(GL_UNIFORM_BUFFER, 1, sphereUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	glGenBuffers(1, &plainUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, plainUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_plain) * scene.plains.size(), scene.plains.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 2, plainUbo);
+	glGenBuffers(1, &planeUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, planeUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_plane) * scene.planes.size(), scene.planes.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 2, planeUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glGenBuffers(1, &surfaceUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, surfaceUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_surface) * scene.surfaces.size(), scene.surfaces.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 5, surfaceUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	glGenBuffers(1, &lightPointUbo);
@@ -311,11 +317,18 @@ void SceneManager::updateBuffers() const
 	    glUnmapBuffer(GL_UNIFORM_BUFFER);
     }
     
-    if (!scene.plains.empty())
+    if (!scene.planes.empty())
     {
-        glBindBuffer(GL_UNIFORM_BUFFER, plainUbo);
-	    GLvoid* plains_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(plains_p, scene.plains.data(), sizeof(rt_plain) * scene.plains.size());
+        glBindBuffer(GL_UNIFORM_BUFFER, planeUbo);
+	    GLvoid* planes_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	    memcpy(planes_p, scene.planes.data(), sizeof(rt_plane) * scene.planes.size());
+	    glUnmapBuffer(GL_UNIFORM_BUFFER);
+    }
+	if (!scene.surfaces.empty())
+    {
+        glBindBuffer(GL_UNIFORM_BUFFER, surfaceUbo);
+	    GLvoid* surfaces_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+	    memcpy(surfaces_p, scene.surfaces.data(), sizeof(rt_surface) * scene.surfaces.size());
 	    glUnmapBuffer(GL_UNIFORM_BUFFER);
     }
 	if (!scene.lights_point.empty())
