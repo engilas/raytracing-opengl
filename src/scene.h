@@ -36,13 +36,15 @@ typedef struct {
 	rt_material material;
 	// pos + radius
 	vec4 obj;
+	bool hollow;
+	float __padding[3];
 } rt_sphere;
 
-struct rt_plane {
+typedef struct {
 	rt_material material;
     vec3 pos; float __p1;
 	vec3 normal; float __p2;
-};
+} rt_plane;
 
 typedef struct {
 	rt_material mat;
@@ -63,7 +65,7 @@ typedef struct {
 	float e; // y
 	float f; // const
 	
-	float __padding[1];
+	float __padding[3];
 
 	void rotate(vec3 axis, float angle)
 	{
@@ -100,8 +102,6 @@ typedef struct {
 	int canvas_height;
 	int reflect_depth;
 	float __padding[2];
-
-    //float __padding[1];
 } rt_scene;
 
 struct rotating_primitive

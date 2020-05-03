@@ -22,7 +22,6 @@
 #define SHADOW_ENABLED 1
 #define DBG 0
 
-#define MULTI_INTERSECTION 1
 #define TOTAL_INTERNAL_REFLECTION 1
 #define DO_FRESNEL 1
 #define AIM_ENABLED 1
@@ -44,6 +43,7 @@ struct rt_material {
 struct rt_sphere {
 	rt_material mat;
 	vec4 obj;
+	bool hollow;
 };
 
 struct rt_plane {
@@ -232,7 +232,7 @@ vec3 getRayDir(vec2 pixel_coords)
 	return normalize(rotate(scene.quat_camera_rotation, result));
 }
 
-bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
+bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, bool hollow, float tm, out float t)
 {
     bool r = false;
 	vec3 v = ro - sp.xyz;
@@ -243,9 +243,8 @@ bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, float tm, out float t)
     {
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
-		#if MULTI_INTERSECTION
-		if (t < 0.0) t = - b + sqrt_;
-		#endif
+		if (hollow && t < 0.0) 
+			t = - b + sqrt_;
 		r = (t > 0.0) && (t < tm);
     } 
     return r;
@@ -366,12 +365,12 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type)
 	float tm = maxDist;
 	float t;
 	for (int i = 0; i < PLANE_SIZE; ++i) {
-		if (intersectPlane(ro,rd, planes[i].normal,planes[i].pos,tm,t)) {
+		if (intersectPlane(ro, rd, planes[i].normal, planes[i].pos, tm, t)) {
 			num = i; tm = t; type = TYPE_PLANE;
 		}
 	}
 	for (int i = 0; i < SPHERE_SIZE; ++i) {
-		if (intersectSphere(ro,rd, spheres[i].obj,tm,t)) {
+		if (intersectSphere(ro, rd, spheres[i].obj, spheres[i].hollow, tm, t)) {
 			num = i; tm = t; type = TYPE_SPHERE;
 		}
 	}
@@ -381,7 +380,7 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type)
 		}
 	}
 	for (int i = 0; i < LIGHT_POINT_SIZE; ++i) {
-		if (intersectSphere(ro,rd, lights_point[i].pos,tm,t)) {
+		if (intersectSphere(ro, rd, lights_point[i].pos, false, tm, t)) {
 			num = i; tm = t; type = TYPE_POINT_LIGHT;
 		}
 	}
@@ -389,13 +388,15 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type)
  	return tm;
 }
 
-bool inShadow(vec3 ro,vec3 rd,float d)
+bool inShadow(vec3 ro, vec3 rd, float d)
 {
 	bool ret = false;
 	float t;
 	
 	for (int i = 0; i < SPHERE_SIZE; ++i)
-		if(intersectSphere(ro,rd,spheres[i].obj,d,t)) {ret = true;}
+		if(intersectSphere(ro, rd, spheres[i].obj, false, d, t)) {ret = true;}
+	for (int i = 0; i < SURFACE_SIZE; ++i)
+		if(intersectSurface(ro, rd, i, d, t)) {ret = true;}
 	#if PLANE_ONESIDE == 0
 	for (int i = 0; i < PLANE_SIZE; ++i)
 		if(intersectPlane(ro,rd, planes[i].normal,planes[i].pos,d,t)) {ret = true;}

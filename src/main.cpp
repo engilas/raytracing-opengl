@@ -28,21 +28,31 @@ int main()
 	wind_height = glWrapper.getHeight();
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
+	scene.scene.camera_pos = {0, 0, -5};
 	//scene.scene.bg_color = vec3{ 15 / 255.0f, 150 / 255.0f, 180 / 255.0f };
 	//scene.scene.bg_color = vec3{ 1, 1, 1 };
-	scene.shadow_ambient = vec3{0.7, 0.7, 0.7};
-	scene.ambient_color = vec3{0.2, 0.2, 0.2};
+	//scene.shadow_ambient = vec3{0.7, 0.7, 0.7};
+	//scene.ambient_color = vec3{0.2, 0.2, 0.2};
 
+	// blue
 	scene.spheres.push_back(SceneManager::create_sphere({ 2, 0, 6 }, 1, 
-		SceneManager::create_material({ 0, 0, 1 }, 50, 0.01)));
+		SceneManager::create_material({ 0, 0, 1 }, 50, 0.4)));
+	// transparent
+	scene.spheres.push_back(SceneManager::create_sphere({ -1, 0, 6 }, 1,
+		SceneManager::create_material({ 1, 1, 1 }, 200, 0.1, 1.125, {1, 0, 2}, 1), true));
+	// planet
+	scene.spheres.push_back(SceneManager::create_sphere({ 7000, 7000, -7000 }, 5000, 
+		SceneManager::create_material({ 0.1, 0.5, 0.7 }, 1, 0.0f)));
 	
 	scene.lights_point.push_back(SceneManager::create_light_point({ 3, 5, 0, 0.1 }, { 1, 1, 1 }, 55.5));
 	scene.lights_direct.push_back(SceneManager::create_light_direct({ 3, -1, 1 }, { 1, 1, 1 }, 1.5));
 
+	// wall
 	scene.planes.push_back(SceneManager::create_plane({ 0, 0, -1 }, { 0, 0, 15 }, 
 		SceneManager::create_material({ 100/255.0f, 240/255.0f, 120/255.0f }, 50, 0.3)));
+	// floor
 	scene.planes.push_back(SceneManager::create_plane({ 0, 1, 0 }, { 0, -1, 0 }, 
-		SceneManager::create_material({ 1, 1, 0 }, 100, 0.3)));
+		SceneManager::create_material({ 1, 1, 0 }, 100, 0.1)));
 
 	rt_material coneMaterial = SceneManager::create_material({ 234 / 255.0f, 17 / 255.0f, 82 / 255.0f }, 200, 0.2);
 	rt_surface cone = SurfaceFactory::GetEllipticCone(1 / 3.0f, 1 / 3.0f, 1, coneMaterial);
@@ -51,6 +61,24 @@ int main()
 	cone.yMin = -1;
 	cone.yMax = 4;
 	scene.surfaces.push_back(cone);
+
+	rt_material cylinderMaterial = SceneManager::create_material({ 200 / 255.0f, 255 / 255.0f, 0 / 255.0f }, 200, 0.2);
+	rt_surface cylinder = SurfaceFactory::GetEllipticCylinder(1 / 2.0f, 1 / 2.0f, cylinderMaterial);
+	cylinder.pos = { 5, 0, 6 };
+	cylinder.rotate({ 1, 0, 0 }, 90);
+	cylinder.yMin = -1;
+	cylinder.yMax = 1;
+	scene.surfaces.push_back(cylinder);
+
+	std::vector<std::string> faces =
+	{
+		"../resources/textures/skybox/right.jpg",
+		"../resources/textures/skybox/left.jpg",
+		"../resources/textures/skybox/top.jpg",
+		"../resources/textures/skybox/bottom.jpg",
+		"../resources/textures/skybox/front.jpg",
+		"../resources/textures/skybox/back.jpg"
+	};
 	
 
 	/*scene.lights_point.push_back(SceneManager::create_light_point({0, 0, -1.5, 0.05}, {1,0.8,0}, 2.5));

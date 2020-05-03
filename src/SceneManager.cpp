@@ -206,10 +206,11 @@ rt_material SceneManager::create_material(vec3 color, int specular, float reflec
     return material;
 }
 
-rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material material)
+rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material material, bool hollow)
 {
 	rt_sphere sphere = {};
 	sphere.obj = { center.x, center.y, center.z, radius };
+	sphere.hollow = hollow;
 
 	// sphere.pos = center;
 	// sphere.radius = radius;
