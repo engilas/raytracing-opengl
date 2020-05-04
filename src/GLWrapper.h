@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <GLFW/glfw3.h>
 #include <string>
+#include <vector>
 
 struct rt_defines;
 
@@ -20,19 +21,20 @@ public:
 
 	bool init_window();
 	void init_shaders(rt_defines defines);
+	void setSkybox(unsigned int textureId);
 
 	void stop();
 
 	GLFWwindow* window;
 
     void draw();
+	static unsigned loadCubemap(std::vector<std::string> faces);
 
-	//GLuint computeHandle;
 	GLuint renderHandle;
 
 private:
-    //GLuint texHandle;
-
+	GLuint skyboxHandle;
+	
 	int width;
 	int height;
 
@@ -45,6 +47,6 @@ private:
     static bool check_program_errors(GLuint program);
 
     static void checkErrors(std::string desc);
-    static GLuint genRenderProg(rt_defines defines);
+	static GLuint genRenderProg(rt_defines defines);
 };
 

@@ -59,24 +59,29 @@ include_directories(
     ${OPENGL_INCLUDE_DIR}
     ${GLFW_INCLUDE_DIR}
     "${CMAKE_SOURCE_DIR}/common"
-    )
+    "${CMAKE_SOURCE_DIR}/external_sources/glm"
+    "${CMAKE_SOURCE_DIR}/external_sources/stb_image"
+)
 
-file(GLOB common_src "common/*.cpp")
-file(GLOB src "src/*.cpp")
-file(GLOB src_h "src/*.h")
+file(GLOB src
+    common/*.cpp
+    src/*.cpp
+    src/*.h
+    external_sources/stb_image/*.cpp
+)
 
 add_executable("rt"
-    ${common_src}
     ${src}
-    ${src_h}
-    )
+)
+
 target_link_libraries("rt"
     PRIVATE ${OPENGL_LIBRARIES}
     PRIVATE ${GLFW_LIBRARY}
     PRIVATE ${X11_LIBS}
     PRIVATE ${CMAKE_DL_LIBS}
     PRIVATE glad-interface
-    )
+)
+
 set_target_properties("rt"
     PROPERTIES
     OUTPUT_NAME "rt"

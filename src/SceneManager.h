@@ -17,6 +17,7 @@ public:
 	static rt_material create_material(vec3 color, int specular, float reflect, float refract = 0.0, vec3 absorb = {}, float diffuse = 0.7, float kd = 0.8, float ks = 0.2);
 	static rt_sphere create_sphere(vec3 center, float radius, rt_material material, bool hollow = false);
 	static rt_plane create_plane(vec3 normal, vec3 pos, rt_material material);
+	static rt_box create_box(vec3 pos, vec3 form, rt_material material);
 	static rt_light_point create_light_point(vec4 position, vec3 color, float intensity);
 	static rt_light_direct create_light_direct(vec3 direction, vec3 color, float intensity);
 	static rt_scene create_scene(int width, int height);
@@ -46,6 +47,7 @@ private:
 	GLuint sphereUbo = 0;
     GLuint planeUbo = 0;
     GLuint surfaceUbo = 0;
+    GLuint boxUbo = 0;
 	GLuint lightPointUbo = 0;
 	GLuint lightDirectUbo = 0;
 

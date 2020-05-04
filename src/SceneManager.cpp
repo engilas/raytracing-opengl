@@ -229,6 +229,15 @@ rt_plane SceneManager::create_plane(vec3 normal, vec3 pos, rt_material material)
     return plane;
 }
 
+rt_box SceneManager::create_box(vec3 pos, vec3 form, rt_material material)
+{
+	rt_box box = {};
+	box.form = form;
+	box.pos = pos;
+	box.mat = material;
+    return box;
+}
+
 rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float intensity)
 {
 	rt_light_point light = {};
@@ -288,6 +297,12 @@ void SceneManager::initBuffers()
 	glBindBuffer(GL_UNIFORM_BUFFER, surfaceUbo);
 	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_surface) * scene.surfaces.size(), scene.surfaces.data(), GL_STATIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 5, surfaceUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	glGenBuffers(1, &boxUbo);
+	glBindBuffer(GL_UNIFORM_BUFFER, boxUbo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_box) * scene.boxes.size(), scene.boxes.data(), GL_STATIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 6, boxUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
 	glGenBuffers(1, &lightPointUbo);

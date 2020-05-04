@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include "scene.h"
+#include <stb_image.h>
 
 static void glfw_error_callback(int error, const char * desc)
 {
@@ -79,6 +80,14 @@ void GLWrapper::init_shaders(rt_defines defines)
 	renderHandle = genRenderProg(defines);
 }
 
+void GLWrapper::setSkybox(unsigned textureId)
+{
+	skyboxHandle = textureId;
+	glUniform1i(glGetUniformLocation(renderHandle, "skybox"), 0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxHandle);
+}
+
 void GLWrapper::stop()
 {
 	glfwDestroyWindow(window);
@@ -146,6 +155,7 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 	replace(fpS, "{SPHERE_SIZE}", std::to_string(defines.sphere_size));
 	replace(fpS, "{PLANE_SIZE}", std::to_string(defines.plane_size));
 	replace(fpS, "{SURFACE_SIZE}", std::to_string(defines.surface_size));
+	replace(fpS, "{BOX_SIZE}", std::to_string(defines.box_size));
 	replace(fpS, "{LIGHT_POINT_SIZE}", std::to_string(defines.light_point_size));
 	replace(fpS, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
 	replace(fpS, "{ITERATIONS}", std::to_string(defines.iterations));
@@ -244,4 +254,36 @@ void GLWrapper::checkErrors(std::string desc)
 		fprintf(stderr, "OpenGL error in \"%s\": (%d)\n", desc.c_str(), e); //todo error must be here
 		exit(20);
 	}
+}
+
+unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+
+	int width, height, nrChannels;
+	for (unsigned int i = 0; i < faces.size(); i++)
+	{
+		unsigned char* data = stbi_load(faces[i].c_str(), &width, &height, &nrChannels, 0);
+		if (data)
+		{
+			glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+				0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data
+			);
+			stbi_image_free(data);
+		}
+		else
+		{
+			std::cout << "Cubemap tex failed to load at path: " << faces[i] << std::endl;
+			stbi_image_free(data);
+		}
+	}
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	return textureID;
 }

@@ -5,17 +5,19 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
+#include <stb_image.h>
 
 static int wind_width = 660;
 static int wind_height = 960;
 
 /*
  * todo
- * cube map
  * box
  * torus
  * plane/box/sphere textures
  */
+
+vec4 getQuaternion(vec3 axis, float angle);
 
 int main()
 {
@@ -41,23 +43,27 @@ int main()
 	scene.spheres.push_back(SceneManager::create_sphere({ -1, 0, 6 }, 1,
 		SceneManager::create_material({ 1, 1, 1 }, 200, 0.1, 1.125, {1, 0, 2}, 1), true));
 	// planet
-	scene.spheres.push_back(SceneManager::create_sphere({ 7000, 7000, -7000 }, 5000, 
+	scene.spheres.push_back(SceneManager::create_sphere({ 7000, 7000, 7000 }, 5000, 
 		SceneManager::create_material({ 0.1, 0.5, 0.7 }, 1, 0.0f)));
 	
 	scene.lights_point.push_back(SceneManager::create_light_point({ 3, 5, 0, 0.1 }, { 1, 1, 1 }, 55.5));
 	scene.lights_direct.push_back(SceneManager::create_light_direct({ 3, -1, 1 }, { 1, 1, 1 }, 1.5));
 
 	// wall
-	scene.planes.push_back(SceneManager::create_plane({ 0, 0, -1 }, { 0, 0, 15 }, 
-		SceneManager::create_material({ 100/255.0f, 240/255.0f, 120/255.0f }, 50, 0.3)));
+	/*scene.planes.push_back(SceneManager::create_plane({ 0, 0, -1 }, { 0, 0, 15 }, 
+		SceneManager::create_material({ 100/255.0f, 240/255.0f, 120/255.0f }, 50, 0.3)));*/
 	// floor
 	scene.planes.push_back(SceneManager::create_plane({ 0, 1, 0 }, { 0, -1, 0 }, 
-		SceneManager::create_material({ 1, 1, 0 }, 100, 0.1)));
+		SceneManager::create_material({ 1, 0.7, 0 }, 100, 0.1)));
+
+	scene.boxes.push_back(SceneManager::create_box({ 8, 0, 6 }, { 1, 1, 1 }, 
+		SceneManager::create_material({ 0.8,0.7,1 }, 50, 0.1)));
+	scene.boxes[0].quat_rotation = getQuaternion({ 0.5774,0.5774,0.5774 }, 90);
 
 	rt_material coneMaterial = SceneManager::create_material({ 234 / 255.0f, 17 / 255.0f, 82 / 255.0f }, 200, 0.2);
 	rt_surface cone = SurfaceFactory::GetEllipticCone(1 / 3.0f, 1 / 3.0f, 1, coneMaterial);
 	cone.pos = { -5, 4, 6 };
-	cone.rotate({ 1, 0, 0 }, 90);
+	cone.quat_rotation = getQuaternion({ 1, 0, 0 }, 90);
 	cone.yMin = -1;
 	cone.yMax = 4;
 	scene.surfaces.push_back(cone);
@@ -65,72 +71,30 @@ int main()
 	rt_material cylinderMaterial = SceneManager::create_material({ 200 / 255.0f, 255 / 255.0f, 0 / 255.0f }, 200, 0.2);
 	rt_surface cylinder = SurfaceFactory::GetEllipticCylinder(1 / 2.0f, 1 / 2.0f, cylinderMaterial);
 	cylinder.pos = { 5, 0, 6 };
-	cylinder.rotate({ 1, 0, 0 }, 90);
+	cylinder.quat_rotation = getQuaternion({ 1, 0, 0 }, 90);
 	cylinder.yMin = -1;
 	cylinder.yMax = 1;
 	scene.surfaces.push_back(cylinder);
 
+	glWrapper.init_shaders(scene.get_defines());
+
 	std::vector<std::string> faces =
 	{
-		"../resources/textures/skybox/right.jpg",
-		"../resources/textures/skybox/left.jpg",
-		"../resources/textures/skybox/top.jpg",
-		"../resources/textures/skybox/bottom.jpg",
-		"../resources/textures/skybox/front.jpg",
-		"../resources/textures/skybox/back.jpg"
+		"../assets/textures/skybox/right.png",
+		"../assets/textures/skybox/left.png",
+		"../assets/textures/skybox/top.png",
+		"../assets/textures/skybox/bottom.png",
+		"../assets/textures/skybox/front.png",
+		"../assets/textures/skybox/back.png"
 	};
 	
-
-	/*scene.lights_point.push_back(SceneManager::create_light_point({0, 0, -1.5, 0.05}, {1,0.8,0}, 2.5));
-	scene.lights_point.push_back(SceneManager::create_light_point({0, 0.25, -1.5, 0.05}, {0,0.0,1}, 2.5));*/
-
-	//mirror
-	/*scene.spheres.push_back(SceneManager::create_sphere({0, -0.7, -1.5}, 0.29, SceneManager::create_material({1,1,1}, 200, 1, 0, {}, 1)));*/
-	//transp
-	//scene.spheres.push_back(SceneManager::create_sphere({0, -0.1, -1.5}, 1.3, SceneManager::create_material({1,1,1}, 200, 0.1, 1.125, {10, 10, 10}, 1)));
-	//transp 2
-	/*scene.spheres.push_back(SceneManager::create_sphere({0, -0.1, -1.5}, 0.15, SceneManager::create_material({1,1,1}, 200, 0.1, 1.125, {0, 10, 0}, 1)));*/
-	// scene.spheres.push_back(SceneManager::create_sphere({1001, 0, 0}, 1000, SceneManager::create_material({1,1,1}, 200, 0.1, 0.8, {}, 1)));
-	/*scene.planes.push_back(SceneManager::create_plane({1,0,0}, {-1,0,0}, SceneManager::create_material({0,1,0}, 200, 0)));
-	scene.planes.push_back(SceneManager::create_plane({-1,0,0}, {1,0,0}, SceneManager::create_material({1,0,0}, 200, 0)));
-	scene.planes.push_back(SceneManager::create_plane({0,1,0}, {0,-1,0}, SceneManager::create_material({1,1,1}, 200, 0.1)));
-	scene.planes.push_back(SceneManager::create_plane({0,-1,0}, {0,1,0}, SceneManager::create_material({1,1,1}, 200, 0.1)));
-	scene.planes.push_back(SceneManager::create_plane({0,0,1}, {0,0,-2}, SceneManager::create_material({1,1,1}, 200, 0.1)));*/
-
-	//rt_material coneMaterial = SceneManager::create_material({ 1, 0, 1 }, 200, 0.1);
-	//rt_surface cone = SurfaceFactory::GetEllipticCone(1 / 3.0f, 1 / 3.0f, 1, coneMaterial);
-	//cone.pos = { 0, 0, -5 };
-	//cone.rotate({ 1, 0, 0 }, 90);
-	//cone.xEdge = { -1, 1 };
-	////cone.yEdge = { -1, 1 };
-	////cone.zEdge = { -1, 1 };
-	//scene.surfaces.push_back(cone);
-
-	//scene.rotating_primitives.push_back({0, light, scene.lights_point[0].pos, 0.4, 0.4, 0, 1.1});
-	//scene.rotating_primitives.push_back({1, light, scene.lights_point[1].pos, 0.4, 0.4, 2, 1.4});
-
-
-
-
-	// scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, 3.5 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.1)));
-	// scene.spheres.push_back(SceneManager::create_sphere({ 1, 0.25, -4 }, 0.3, SceneManager::create_material({ 0,1,0 }, 30, 0.05, 1.125, {4,2, 0.5})));
-	// scene.lights.push_back(SceneManager::create_light(point, 25.0f, { 1.0,1.0,1.0 }, { 0.8,4,0 }, { 0 }));
-	// scene.lights.push_back(SceneManager::create_light(direct, 0.2f, { 1.0,1.0,1.0 }, {}, { 0, -1, 0.2 }));
-	// scene.planes.push_back(SceneManager::create_plane({ 0,1,0 }, { 0,-6,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	// //scene.planes.push_back(SceneManager::create_plane({ 0,-1,0 }, { 0,6,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1, 0, {}, 0.7, 0.2)));
-	// scene.planes.push_back(SceneManager::create_plane({ 0,0,-1 }, { 0,0,6 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	// scene.planes.push_back(SceneManager::create_plane({ 0,0,1 }, { 0,0,-6 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	// scene.planes.push_back(SceneManager::create_plane({ 1,0,0 }, { -6,0,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-	// scene.planes.push_back(SceneManager::create_plane({ -1,0,0 }, { 6,0,0 }, SceneManager::create_material({ 1,1,1 }, 50, 0.1)));
-
-	glWrapper.init_shaders(scene.get_defines());
+	glWrapper.setSkybox(GLWrapper::loadCubemap(faces));
 
 	SceneManager scene_manager(wind_width, wind_height, scene, &glWrapper);
 	scene_manager.init();
 
 	glfwSwapInterval(1);
 
-    const auto start = std::chrono::steady_clock::now();
     auto currentTime = std::chrono::steady_clock::now();
     int frames_count = 0;
 
@@ -150,4 +114,12 @@ int main()
 
 	glWrapper.stop(); // stop glfw, close window
 	return 0;
+}
+
+vec4 getQuaternion(vec3 axis, float angle)
+{
+	float rad = angle * PI_F / 180.0f;
+	float rotationAxis[] = { axis.x, axis.y, axis.z };
+	Quaternion<float> quat(rotationAxis, rad);
+	return quat.GetStruct();
 }

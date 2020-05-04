@@ -17,7 +17,8 @@
 #define TYPE_SPHERE 0
 #define TYPE_PLANE 1
 #define TYPE_SURFACE 2
-#define TYPE_POINT_LIGHT 3
+#define TYPE_BOX 3
+#define TYPE_POINT_LIGHT 4
 
 #define SHADOW_ENABLED 1
 #define DBG 0
@@ -50,6 +51,13 @@ struct rt_plane {
 	rt_material mat;
 	vec3 pos;
 	vec3 normal;
+};
+
+struct rt_box {
+	rt_material mat;
+	vec4 quat_rotation;
+	vec3 pos;
+	vec3 form;
 };
 
 struct rt_surface {
@@ -99,11 +107,14 @@ struct hit_record {
 #define SPHERE_SIZE {SPHERE_SIZE}
 #define PLANE_SIZE {PLANE_SIZE}
 #define SURFACE_SIZE {SURFACE_SIZE}
+#define BOX_SIZE {BOX_SIZE}
 #define LIGHT_DIRECT_SIZE {LIGHT_DIRECT_SIZE}
 #define LIGHT_POINT_SIZE {LIGHT_POINT_SIZE}
 #define AMBIENT_COLOR {AMBIENT_COLOR}
 #define SHADOW_AMBIENT {SHADOW_AMBIENT}
 #define ITERATIONS {ITERATIONS}
+
+uniform samplerCube skybox;
 
 layout( std140, binding=0 ) uniform scene_buf
 {
@@ -134,6 +145,15 @@ layout( std140, binding=5 ) uniform surfaces_buf
     rt_surface surfaces[SURFACE_SIZE];
 	#else
 	rt_surface surfaces[1];
+	#endif
+};
+
+layout( std140, binding=6 ) uniform boxes_buf
+{
+	#if BOX_SIZE != 0
+    rt_box boxes[BOX_SIZE];
+	#else
+	rt_box boxes[1];
 	#endif
 };
 
@@ -194,36 +214,40 @@ void swap(inout float a, inout float b)
 	b = tmp;
 }
 
+bool isBetween(vec3 value, vec3 min, vec3 max) 
+{
+	return greaterThan(value, min) == bvec3(true) && lessThan(value, max) == bvec3(true);
+}
+
 const float maxDist = 1000000.0;
 const float eps = 0.001;
 
-//const rt_material empty_mat = rt_material(vec3(0), vec3(0), 0, 0, 0, 0, 0, 0);
-
-
-vec4 multiplyQuaternion(vec4 q1, vec4 q2) {
-	vec4 result;
-
-	result.w = q1.w * q2.w - q1.x * q2.x - q1.y * q2.y - q1.z * q2.z;
-	result.x = q1.w * q2.x + q1.x * q2.w + q1.y * q2.z - q1.z * q2.y;
-	result.y = q1.w * q2.y + q1.y * q2.w + q1.z * q2.x - q1.x * q2.z;
-	result.z = q1.w * q2.z + q1.z * q2.w + q1.x * q2.y - q1.y * q2.x;
-
-	return result;
+vec4 quat_conj(vec4 q)
+{ 
+  	return vec4(-q.x, -q.y, -q.z, q.w); 
+}
+  
+vec4 quat_inv(vec4 q)
+{ 
+  	return quat_conj(q) * (1 / dot(q, q));
 }
 
-vec4 inverseQuaternion(vec4 q) {
-	float scale = 1 / (q.w * q.w + dot(q, q));
-	vec4 inverse = - scale * q;
-	inverse.w = scale * q.w;
-	return inverse;
+vec4 quat_mult(vec4 q1, vec4 q2)
+{ 
+	vec4 qr;
+	qr.x = (q1.w * q2.x) + (q1.x * q2.w) + (q1.y * q2.z) - (q1.z * q2.y);
+	qr.y = (q1.w * q2.y) - (q1.x * q2.z) + (q1.y * q2.w) + (q1.z * q2.x);
+	qr.z = (q1.w * q2.z) + (q1.x * q2.y) - (q1.y * q2.x) + (q1.z * q2.w);
+	qr.w = (q1.w * q2.w) - (q1.x * q2.x) - (q1.y * q2.y) - (q1.z * q2.z);
+	return qr;
 }
 
-vec3 rotate(vec4 q, vec3 v)
-{
-	vec4 qv = vec4(v, 0);
-	vec4 mult = multiplyQuaternion(q, qv);
-	vec3 result = vec3(multiplyQuaternion(mult, inverseQuaternion(q)));
-	return result;
+vec3 rotate(vec4 qr, vec3 v)
+{ 
+	vec4 qr_conj = quat_conj(qr);
+	vec4 q_pos = vec4(v.xyz, 0);
+	vec4 q_tmp = quat_mult(qr, q_pos);
+	return quat_mult(q_tmp, qr_conj).xyz;
 }
 
 vec3 getRayDir(vec2 pixel_coords)
@@ -266,9 +290,34 @@ bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
     return false; 
 }
 
-bool isBetween(vec3 value, vec3 min, vec3 max) 
+bool intersectBox(vec3 ro, vec3 rd, int num, float tm, out float t, out vec3 normal) 
 {
-	return greaterThan(value, min) == bvec3(true) && lessThan(value, max) == bvec3(true);
+	rt_box box = boxes[num];
+    // convert from ray to box space
+	vec3 rdd = rotate(box.quat_rotation, rd);
+	vec3 roo = rotate(box.quat_rotation, ro - box.pos);
+
+	// ray-box intersection in box space
+    vec3 m = 1.0/rdd;
+    vec3 n = m*roo;
+    vec3 k = abs(m)*box.form;
+	
+    vec3 t1 = -n - k;
+    vec3 t2 = -n + k;
+
+	float tN = max( max( t1.x, t1.y ), t1.z );
+	float tF = min( min( t2.x, t2.y ), t2.z );
+	
+	if( tN > tF || tF < 0.0) return false;
+    
+	if (tN >= tm)
+		return false;
+
+	vec3 nor = -sign(rdd)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
+	t = tN;
+	// convert to ray space
+	normal = rotate(quat_inv(box.quat_rotation), nor);
+	return true;
 }
 
 bool checkSurfaceEdges(vec3 o, vec3 d, inout float tMin, inout float tMax, vec3 v_min, vec3 v_max, float epsilon)
@@ -290,8 +339,7 @@ bool intersectSurface(vec3 ro, vec3 rd, int num, float tm, out float t)
 	vec3 orig_ro = ro;
 	vec3 orig_rd = rd;
 	rt_surface surface = surfaces[num];
-	ro = ro - surface.pos;
-	ro = rotate(surface.quat_rotation, ro);
+	ro = rotate(surface.quat_rotation, ro - surface.pos);
 	rd = rotate(surface.quat_rotation, rd);
 
 	float a = surface.a;
@@ -356,30 +404,35 @@ vec3 getSurfaceNormal(vec3 ro, vec3 rd, float t, int num) {
 	vec3 tm = rd * t + ro;
 
 	vec3 normal = vec3(2 * surface.a * tm.x, 2 * surface.b * tm.y + surface.e, 2 * surface.c * tm.z + surface.d);
-	normal = rotate(inverseQuaternion(surface.quat_rotation), normal);
+	normal = rotate(quat_inv(surface.quat_rotation), normal);
 	return normalize(normal);
 }
 
-float calcInter(vec3 ro, vec3 rd, out int num, out int type)
+float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal)
 {
 	float tm = maxDist;
 	float t;
-	for (int i = 0; i < PLANE_SIZE; ++i) {
+	for (int i = 0; i < PLANE_SIZE; i++) {
 		if (intersectPlane(ro, rd, planes[i].normal, planes[i].pos, tm, t)) {
 			num = i; tm = t; type = TYPE_PLANE;
 		}
 	}
-	for (int i = 0; i < SPHERE_SIZE; ++i) {
+	for (int i = 0; i < SPHERE_SIZE; i++) {
 		if (intersectSphere(ro, rd, spheres[i].obj, spheres[i].hollow, tm, t)) {
 			num = i; tm = t; type = TYPE_SPHERE;
 		}
 	}
-	for (int i = 0; i < SURFACE_SIZE; ++i) {
+	for (int i = 0; i < SURFACE_SIZE; i++) {
 		if (intersectSurface(ro, rd, i, tm, t)) {
 			num = i; tm = t; type = TYPE_SURFACE;
 		}
 	}
-	for (int i = 0; i < LIGHT_POINT_SIZE; ++i) {
+	for (int i = 0; i < BOX_SIZE; i++) {
+		if (intersectBox(ro, rd, i, tm, t, opt_normal)) {
+			num = i; tm = t; type = TYPE_BOX;
+		}
+	}
+	for (int i = 0; i < LIGHT_POINT_SIZE; i++) {
 		if (intersectSphere(ro, rd, lights_point[i].pos, false, tm, t)) {
 			num = i; tm = t; type = TYPE_POINT_LIGHT;
 		}
@@ -487,7 +540,7 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
     #endif
 }
 
-hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type) {
+hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type, vec3 opt_normal) {
 	hit_record hr;
 	if (type == TYPE_SPHERE) {
 		hr = hit_record(spheres[num].mat, normalize(pt - spheres[num].obj.xyz));
@@ -498,6 +551,9 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type) 
 	if (type == TYPE_SURFACE) {
 		hr = hit_record(surfaces[num].mat, getSurfaceNormal(ro, rd, tm, num));
 	}
+	if (type == TYPE_BOX) {
+		hr = hit_record(boxes[num].mat, opt_normal);
+	}
 	// if (type == TYPE_POINT_LIGHT) {
 	// 	hr = hit_record(empty_mat, vec3(0));
 	// }
@@ -507,14 +563,14 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type) 
 vec3 getReflection(vec3 ro, vec3 rd)
 {
 	vec3 color = vec3(0);
-	vec3 pt;
+	vec3 pt, opt_normal;
 	int num, type;
-	float tm = calcInter(ro,rd,num,type);
+	float tm = calcInter(ro, rd, num, type, opt_normal);
 	if (type == TYPE_POINT_LIGHT) return lights_point[num].color;
 	hit_record hr;
 	if(tm < maxDist) {
 		pt = ro + rd * tm;
-		hr = get_hit_info(ro, rd, pt, tm, num, type);
+		hr = get_hit_info(ro, rd, pt, tm, num, type, opt_normal);
 		color = calcShade(dot(rd, hr.n) < 0 ? pt + hr.n * eps : pt - hr.n * eps, rd, hr.mat.color, hr.mat.diffuse, hr.n, hr.mat.specular, true, hr.mat.kd, hr.mat.ks);
 	}
 	return color;
@@ -539,6 +595,7 @@ void main()
     rt_material mat;
 	vec3 pt,refCol,n,refl;
 	vec4 ob;
+	vec3 opt_normal; // if normal calculations can be processed with intersection search (box)
 
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
@@ -551,11 +608,11 @@ void main()
 	
 	for(int i = 0; i < ITERATIONS; i++)
 	{
-		tm = calcInter(ro,rd,num,type);
+		tm = calcInter(ro,rd,num,type,opt_normal);
 		if(tm < maxDist)
 		{
 			pt = ro + rd*tm;
-			hr = get_hit_info(ro, rd, pt, tm, num, type);
+			hr = get_hit_info(ro, rd, pt, tm, num, type, opt_normal);
 
 			if (type == TYPE_POINT_LIGHT) {
 				color += lights_point[num].color * mask;
@@ -620,7 +677,7 @@ void main()
 			}
 		} 
 		else {
-			color += scene.bg_color * mask;
+			color += texture(skybox, rd).rgb * mask;
 			break;
 		}
 	}

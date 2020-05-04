@@ -10,6 +10,7 @@ struct rt_defines
 	int sphere_size;
 	int plane_size;
 	int surface_size;
+	int box_size;
 	int light_point_size;
 	int light_direct_size;
 	int iterations;
@@ -49,6 +50,13 @@ typedef struct {
 typedef struct {
 	rt_material mat;
 	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	vec3 pos; float __p1;
+	vec3 form; float __p2;
+} rt_box;
+
+typedef struct {
+	rt_material mat;
+	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
 	float xMin = -FLT_MAX;
 	float yMin = -FLT_MAX;
 	float zMin = -FLT_MAX;
@@ -66,14 +74,6 @@ typedef struct {
 	float f; // const
 	
 	float __padding[3];
-
-	void rotate(vec3 axis, float angle)
-	{
-		float rad = angle * PI_F / 180.0f;
-		float rotationAxis[] = { axis.x, axis.y, axis.z };
-		Quaternion<float> quat(rotationAxis, rad);
-		quat_rotation = quat.GetStruct();
-	}
 } rt_surface;
 
 typedef enum { sphere, light } primitiveType;
@@ -123,6 +123,7 @@ struct scene_container
 	std::vector<rt_sphere> spheres;
 	std::vector<rt_plane> planes;
 	std::vector<rt_surface> surfaces;
+	std::vector<rt_box> boxes;
 	std::vector<rt_light_point> lights_point;
 	std::vector<rt_light_direct> lights_direct;
 	std::vector<rotating_primitive> rotating_primitives;
@@ -132,6 +133,7 @@ struct scene_container
 		return {static_cast<int>(spheres.size()),
 			static_cast<int>(planes.size()),
 			static_cast<int>(surfaces.size()),
+			static_cast<int>(boxes.size()),
 			static_cast<int>(lights_point.size()),
 			static_cast<int>(lights_direct.size()),
 			scene.reflect_depth, ambient_color, shadow_ambient};

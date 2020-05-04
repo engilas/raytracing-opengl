@@ -1,9 +1,7 @@
-//#include "quaternion.h"
+#pragma once
 #include "scene.h"
 
-#define PI_F 3.14159265358979f
-
-typedef class SurfaceFactory {
+class SurfaceFactory {
 public:
 	
 	static rt_surface GetEllipsoid(float a, float b, float c, rt_material material)
