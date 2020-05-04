@@ -11,6 +11,7 @@ struct rt_defines
 	int plane_size;
 	int surface_size;
 	int box_size;
+	int torus_size;
 	int light_point_size;
 	int light_direct_size;
 	int iterations;
@@ -53,6 +54,13 @@ typedef struct {
 	vec3 pos; float __p1;
 	vec3 form; float __p2;
 } rt_box;
+
+typedef struct {
+	rt_material mat;
+	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	vec3 pos; float __p1;
+	vec2 form; float __p2[2];
+} rt_torus;
 
 typedef struct {
 	rt_material mat;
@@ -104,17 +112,6 @@ typedef struct {
 	float __padding[2];
 } rt_scene;
 
-struct rotating_primitive
-{
-	int index;
-	primitiveType type;
-	vec4 pos;
-	float a;
-	float b;
-	float current;
-	float speed;
-};
-
 struct scene_container
 {
 	rt_scene scene;
@@ -124,9 +121,9 @@ struct scene_container
 	std::vector<rt_plane> planes;
 	std::vector<rt_surface> surfaces;
 	std::vector<rt_box> boxes;
+	std::vector<rt_torus> toruses;
 	std::vector<rt_light_point> lights_point;
 	std::vector<rt_light_direct> lights_direct;
-	std::vector<rotating_primitive> rotating_primitives;
 
 	rt_defines get_defines()
 	{
@@ -134,6 +131,7 @@ struct scene_container
 			static_cast<int>(planes.size()),
 			static_cast<int>(surfaces.size()),
 			static_cast<int>(boxes.size()),
+			static_cast<int>(toruses.size()),
 			static_cast<int>(lights_point.size()),
 			static_cast<int>(lights_direct.size()),
 			scene.reflect_depth, ambient_color, shadow_ambient};

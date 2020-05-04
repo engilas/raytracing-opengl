@@ -12,12 +12,13 @@ static int wind_height = 960;
 
 /*
  * todo
- * box
- * torus
  * plane/box/sphere textures
+ * refactoring (proj structure, use glm, formatting)
+ * AA
  */
 
 vec4 getQuaternion(vec3 axis, float angle);
+void updateScene(scene_container& scene, float time);
 
 int main()
 {
@@ -49,17 +50,17 @@ int main()
 	scene.lights_point.push_back(SceneManager::create_light_point({ 3, 5, 0, 0.1 }, { 1, 1, 1 }, 55.5));
 	scene.lights_direct.push_back(SceneManager::create_light_direct({ 3, -1, 1 }, { 1, 1, 1 }, 1.5));
 
-	// wall
-	/*scene.planes.push_back(SceneManager::create_plane({ 0, 0, -1 }, { 0, 0, 15 }, 
-		SceneManager::create_material({ 100/255.0f, 240/255.0f, 120/255.0f }, 50, 0.3)));*/
 	// floor
 	scene.planes.push_back(SceneManager::create_plane({ 0, 1, 0 }, { 0, -1, 0 }, 
 		SceneManager::create_material({ 1, 0.7, 0 }, 100, 0.1)));
-
-	scene.boxes.push_back(SceneManager::create_box({ 8, 0, 6 }, { 1, 1, 1 }, 
+	// box
+	scene.boxes.push_back(SceneManager::create_box({ 8, 1, 6 }, { 1, 1, 1 }, 
 		SceneManager::create_material({ 0.8,0.7,1 }, 50, 0.1)));
-	scene.boxes[0].quat_rotation = getQuaternion({ 0.5774,0.5774,0.5774 }, 90);
+	// torus
+	scene.toruses.push_back(SceneManager::create_torus({ -9, 0.5, 6 }, { 1.0, 0.5 },
+		SceneManager::create_material({ 0.1, 0.4, 1 }, 200, 0.2)));
 
+	// cone
 	rt_material coneMaterial = SceneManager::create_material({ 234 / 255.0f, 17 / 255.0f, 82 / 255.0f }, 200, 0.2);
 	rt_surface cone = SurfaceFactory::GetEllipticCone(1 / 3.0f, 1 / 3.0f, 1, coneMaterial);
 	cone.pos = { -5, 4, 6 };
@@ -68,6 +69,7 @@ int main()
 	cone.yMax = 4;
 	scene.surfaces.push_back(cone);
 
+	// cylinder
 	rt_material cylinderMaterial = SceneManager::create_material({ 200 / 255.0f, 255 / 255.0f, 0 / 255.0f }, 200, 0.2);
 	rt_surface cylinder = SurfaceFactory::GetEllipticCylinder(1 / 2.0f, 1 / 2.0f, cylinderMaterial);
 	cylinder.pos = { 5, 0, 6 };
@@ -90,11 +92,12 @@ int main()
 	
 	glWrapper.setSkybox(GLWrapper::loadCubemap(faces));
 
-	SceneManager scene_manager(wind_width, wind_height, scene, &glWrapper);
+	SceneManager scene_manager(wind_width, wind_height, &scene, &glWrapper);
 	scene_manager.init();
 
 	glfwSwapInterval(1);
 
+	auto start = std::chrono::steady_clock::now();
     auto currentTime = std::chrono::steady_clock::now();
     int frames_count = 0;
 
@@ -103,9 +106,11 @@ int main()
 		
         ++frames_count;
         auto newTime = std::chrono::steady_clock::now();
-		std::chrono::duration<double> frameTime = (newTime - currentTime);
+		std::chrono::duration<float> elapsed = (newTime - start);
+		std::chrono::duration<float> frameTime = (newTime - currentTime);
 		currentTime = newTime;
 
+		updateScene(scene, elapsed.count());
 		scene_manager.update(frameTime.count());
         glWrapper.draw();
 		glfwSwapBuffers(glWrapper.window);
@@ -114,6 +119,24 @@ int main()
 
 	glWrapper.stop(); // stop glfw, close window
 	return 0;
+}
+
+void updateScene(scene_container& scene, float time)
+{
+	//rt_sphere* blueSphere = &scene.spheres[0];
+	//rotateXZ(&blueSphere->obj.x, &blueSphere->obj.z, time);
+	//blueSphere->obj.x = cos(time) * 10;
+	//blueSphere->obj.z = sin(time) * 10;
+	
+	rt_sphere* planet = &scene.spheres[2];
+	planet->obj.x = cos(time / 50) * 7000;
+	planet->obj.z = sin(time / 50) * 7000;
+
+	rt_box* box = &scene.boxes[0];
+	box->quat_rotation = getQuaternion({ 0.5774,0.5774,0.5774 }, time * 20);
+
+	rt_torus* torus = &scene.toruses[0];
+	torus->quat_rotation = getQuaternion({ 0,1,0 }, time * 30);
 }
 
 vec4 getQuaternion(vec3 axis, float angle)

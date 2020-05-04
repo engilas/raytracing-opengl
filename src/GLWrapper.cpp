@@ -94,11 +94,6 @@ void GLWrapper::stop()
 	glfwTerminate();
 }
 
-inline unsigned divup(unsigned a, unsigned b)
-{
-	return (a + b - 1) / b;
-}
-
 void GLWrapper::draw()
 {
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
@@ -156,6 +151,7 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 	replace(fpS, "{PLANE_SIZE}", std::to_string(defines.plane_size));
 	replace(fpS, "{SURFACE_SIZE}", std::to_string(defines.surface_size));
 	replace(fpS, "{BOX_SIZE}", std::to_string(defines.box_size));
+	replace(fpS, "{TORUS_SIZE}", std::to_string(defines.torus_size));
 	replace(fpS, "{LIGHT_POINT_SIZE}", std::to_string(defines.light_point_size));
 	replace(fpS, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
 	replace(fpS, "{ITERATIONS}", std::to_string(defines.iterations));

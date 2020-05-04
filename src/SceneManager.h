@@ -9,7 +9,7 @@
 class SceneManager 
 {
 public:
-	SceneManager(int wind_width, int wind_height, scene_container &scene, GLWrapper* wrapper);
+	SceneManager(int wind_width, int wind_height, scene_container* scene, GLWrapper* wrapper);
 
 	void init();
 	void update(float frameRate);
@@ -18,12 +18,13 @@ public:
 	static rt_sphere create_sphere(vec3 center, float radius, rt_material material, bool hollow = false);
 	static rt_plane create_plane(vec3 normal, vec3 pos, rt_material material);
 	static rt_box create_box(vec3 pos, vec3 form, rt_material material);
+	static rt_torus create_torus(vec3 pos, vec2 form, rt_material material);
 	static rt_light_point create_light_point(vec4 position, vec3 color, float intensity);
 	static rt_light_direct create_light_direct(vec3 direction, vec3 color, float intensity);
 	static rt_scene create_scene(int width, int height);
 
 private:
-	scene_container scene;
+	scene_container* scene;
 
 	int wind_width;
 	int wind_height;
@@ -48,6 +49,7 @@ private:
     GLuint planeUbo = 0;
     GLuint surfaceUbo = 0;
     GLuint boxUbo = 0;
+    GLuint torusUbo = 0;
 	GLuint lightPointUbo = 0;
 	GLuint lightDirectUbo = 0;
 
@@ -55,7 +57,6 @@ private:
 	void addVector(vec3 & v1, const float v2[3]);
 	void moveCamera(Quaternion<float>& q, const float direction[3], vec3 & vector, float speed);
 	void moveCamera(const float direction[3], vec3 & vector, float speed);
-	void ProcessRotations(float frameRate);
 	void UpdateScene(float frameRate);
 	void glfw_key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);

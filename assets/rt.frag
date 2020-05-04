@@ -18,7 +18,8 @@
 #define TYPE_PLANE 1
 #define TYPE_SURFACE 2
 #define TYPE_BOX 3
-#define TYPE_POINT_LIGHT 4
+#define TYPE_TORUS 4
+#define TYPE_POINT_LIGHT 5
 
 #define SHADOW_ENABLED 1
 #define DBG 0
@@ -74,6 +75,13 @@ struct rt_surface {
 	float f; // const	
 };
 
+struct rt_torus {
+	rt_material mat;
+	vec4 quat_rotation;
+	vec3 pos;
+	vec2 form; // x - ?, y - ?
+};
+
 struct rt_light_direct {
 	vec3 direction;
 	vec3 color;
@@ -108,6 +116,7 @@ struct hit_record {
 #define PLANE_SIZE {PLANE_SIZE}
 #define SURFACE_SIZE {SURFACE_SIZE}
 #define BOX_SIZE {BOX_SIZE}
+#define TORUS_SIZE {TORUS_SIZE}
 #define LIGHT_DIRECT_SIZE {LIGHT_DIRECT_SIZE}
 #define LIGHT_POINT_SIZE {LIGHT_POINT_SIZE}
 #define AMBIENT_COLOR {AMBIENT_COLOR}
@@ -154,6 +163,15 @@ layout( std140, binding=6 ) uniform boxes_buf
     rt_box boxes[BOX_SIZE];
 	#else
 	rt_box boxes[1];
+	#endif
+};
+
+layout( std140, binding=7 ) uniform toruses_buf
+{
+	#if TORUS_SIZE != 0
+    rt_torus toruses[TORUS_SIZE];
+	#else
+	rt_torus toruses[1];
 	#endif
 };
 
@@ -320,6 +338,68 @@ bool intersectBox(vec3 ro, vec3 rd, int num, float tm, out float t, out vec3 nor
 	return true;
 }
 
+// torus section
+float uit=0.;
+vec2 cmul(vec2 c1, vec2 c2){
+	return vec2(c1.x*c2.x-c1.y*c2.y,c1.x*c2.y+c1.y*c2.x);
+}
+vec2 cinv(vec2 c){
+	return vec2(c.x,-c.y)/dot(c,c);
+}
+vec2 cTorus(vec2 t, in vec3 ro, in vec3 rd, in vec2 torus ){
+// f(t) = (tÂ²*rdÂ²+2*t*ro*rd+roÂ²+RÂ²-rÂ²)Â²-4*RÂ²*(tÂ²*rdxyÂ²+2*t*roxy*rdxy+roxyÂ²)
+	float R2=torus.x*torus.x;
+	float r2=torus.y*torus.y;
+	vec2 t2=vec2(t.x*t.x-t.y*t.y,2.*t.x*t.y);//cmul(t,t);
+	vec2 res= t2*dot(rd,rd)+2.*t*dot(ro,rd)+vec2(dot(ro,ro)+R2-r2,0.);
+	res=cmul(res,res);
+	vec2 res2=4.*R2*(t2*dot(rd.xy,rd.xy)+2.*t*dot(ro.xy,rd.xy)+vec2(dot(ro.xy,ro.xy),0.));
+	
+	return res-res2;
+}
+float DKstep(inout vec2 c0, vec2 c1, vec2 c2, vec2 c3, in vec3 ro, in vec3 rd, in vec2 torus){
+	vec2 fc=cTorus(c0,ro,rd,torus);
+	fc=cmul(fc,cinv(cmul(c0-c1,cmul(c0-c2,c0-c3))));
+	c0-=fc;
+	return max(abs(fc.x),abs(fc.y));
+}
+bool intersectTorus( in vec3 ro, in vec3 rd, int num, float tm, out float t ){
+	rt_torus torus = toruses[num];
+	ro = rotate(torus.quat_rotation, ro - torus.pos);
+	rd = rotate(torus.quat_rotation, rd);
+	vec2 c0=vec2(1.,0.);
+	vec2 c1=vec2(0.4,0.9);
+	vec2 c2=cmul(c1,vec2(0.4,0.9));
+	vec2 c3=cmul(c2,vec2(0.4,0.9));
+	for(int i=0; i<60; i++){
+		float e = DKstep(c0, c1, c2, c3, ro, rd, torus.form);
+		e = max(e,DKstep(c1, c2, c3, c0, ro, rd, torus.form));
+		e = max(e,DKstep(c2, c3, c0, c1, ro, rd, torus.form));
+		e = max(e,DKstep(c3, c0, c1, c2, ro, rd, torus.form));
+		if(e<eps) break;
+		uit+=1.;
+	}
+	vec4 rs= vec4(c0.x, c1.x, c2.x, c3.x);
+	vec4 ri= abs(vec4(c0.y, c1.y, c2.y, c3.y));
+
+	if(ri.x>eps || rs.x<0.) rs.x=10000.;
+	if(ri.y>eps || rs.y<0.) rs.y=10000.;
+	if(ri.z>eps || rs.z<0.) rs.z=10000.;
+	if(ri.w>eps || rs.w<0.) rs.w=10000.;
+	t = min(min(rs.x,rs.y),min(rs.z,rs.w));
+	return t > 0 && t < 100 && t < tm;
+}
+vec3 getTorusNormal(vec3 ro, vec3 rd, float t, int num)
+{
+	rt_torus torus = toruses[num];
+	ro = rotate(torus.quat_rotation, ro - torus.pos);
+	rd = rotate(torus.quat_rotation, rd);
+	vec3 pos = ro + rd * t;
+	vec3 normal = pos*(dot(pos,pos)- torus.form.y*torus.form.y - torus.form.x*torus.form.x*vec3(1.0,1.0,-1.0));
+	return normalize(rotate(quat_inv(torus.quat_rotation), normal));
+}
+// end torus section
+
 bool checkSurfaceEdges(vec3 o, vec3 d, inout float tMin, inout float tMax, vec3 v_min, vec3 v_max, float epsilon)
 {
 	vec3 pt = d * tMin + o;
@@ -362,7 +442,7 @@ bool intersectSurface(vec3 ro, vec3 rd, int num, float tm, out float t)
 	float p4 = sqrt(p1 * p1 - 4 * p2 * p3);
 
 	//division by zero
-	if (abs(p2) < 1e-20)
+	if (abs(p2) < 1e-6)
 	{
 		t = -p3 / p1;
 		return t > tm;
@@ -432,6 +512,11 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal
 			num = i; tm = t; type = TYPE_BOX;
 		}
 	}
+	for (int i = 0; i < TORUS_SIZE; i++) {
+		if (intersectTorus(ro, rd, i, tm, t)) {
+			num = i; tm = t; type = TYPE_TORUS;
+		}
+	}
 	for (int i = 0; i < LIGHT_POINT_SIZE; i++) {
 		if (intersectSphere(ro, rd, lights_point[i].pos, false, tm, t)) {
 			num = i; tm = t; type = TYPE_POINT_LIGHT;
@@ -445,16 +530,20 @@ bool inShadow(vec3 ro, vec3 rd, float d)
 {
 	bool ret = false;
 	float t;
+	vec3 opt_normal;
 	
-	for (int i = 0; i < SPHERE_SIZE; ++i)
+	for (int i = 0; i < SPHERE_SIZE; i++)
 		if(intersectSphere(ro, rd, spheres[i].obj, false, d, t)) {ret = true;}
-	for (int i = 0; i < SURFACE_SIZE; ++i)
+	for (int i = 0; i < SURFACE_SIZE; i++)
 		if(intersectSurface(ro, rd, i, d, t)) {ret = true;}
+	for (int i = 0; i < BOX_SIZE; i++)
+		if(intersectBox(ro, rd, i, d, t, opt_normal)) {ret = true;}
+	for (int i = 0; i < TORUS_SIZE; i++)
+		if(intersectTorus(ro, rd, i, d, t)) {ret = true;}
 	#if PLANE_ONESIDE == 0
-	for (int i = 0; i < PLANE_SIZE; ++i)
+	for (int i = 0; i < PLANE_SIZE; i++)
 		if(intersectPlane(ro,rd, planes[i].normal,planes[i].pos,d,t)) {ret = true;}
 	#endif
-
 
 	return ret;
 }
@@ -478,7 +567,7 @@ void calcShade2(vec3 l, vec3 lcol, float intensity, vec3 pt, vec3 rd, vec3 col, 
 	}
 }
 
-vec3 calcShade (vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
+vec3 calcShade(vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
 {
 	float dist, distDiv;
 	vec3 lcol,l;
@@ -553,6 +642,9 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type, 
 	}
 	if (type == TYPE_BOX) {
 		hr = hit_record(boxes[num].mat, opt_normal);
+	}
+	if (type == TYPE_TORUS) {
+		hr = hit_record(toruses[num].mat, getTorusNormal(ro, rd, tm, num));
 	}
 	// if (type == TYPE_POINT_LIGHT) {
 	// 	hr = hit_record(empty_mat, vec3(0));
