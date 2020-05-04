@@ -79,7 +79,7 @@ struct rt_torus {
 	rt_material mat;
 	vec4 quat_rotation;
 	vec3 pos;
-	vec2 form; // x - ?, y - ?
+	vec2 form; // x - radius, y - ring thickness
 };
 
 struct rt_light_direct {
@@ -97,14 +97,14 @@ struct rt_light_point {
 };
 
 struct rt_scene {
-	vec4 quat_camera_rotation;//uniform
-	vec3 camera_pos;//uniform
-	vec3 bg_color;//uniform
+	vec4 quat_camera_rotation;
+	vec3 camera_pos;
+	vec3 bg_color;
 
-	int canvas_width;// uniform
-	int canvas_height;// uniform
+	int canvas_width;
+	int canvas_height;
 
-	int reflect_depth;//define
+	int reflect_depth;
 };
 
 struct hit_record {
@@ -122,6 +122,8 @@ struct hit_record {
 #define AMBIENT_COLOR {AMBIENT_COLOR}
 #define SHADOW_AMBIENT {SHADOW_AMBIENT}
 #define ITERATIONS {ITERATIONS}
+
+out vec4 FragColor;
 
 uniform samplerCube skybox;
 
@@ -201,7 +203,7 @@ void _dbg()
 {
 	#if DBG
 	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
-    gl_FragColor =vec4(1,0,0,1);
+    FragColor =vec4(1,0,0,1);
 	dbgEd = true;
 	#endif
 }
@@ -211,7 +213,7 @@ void _dbg(float value)
 	#if DBG
 	value = clamp(value, 0, 1);
 	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
-    gl_FragColor = vec4(value,value,value,1);
+    FragColor = vec4(value,value,value,1);
 	dbgEd = true;
 	#endif
 }
@@ -220,7 +222,7 @@ void _dbg(vec3 value)
 {
 	#if DBG
 	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
-    gl_FragColor = vec4(clamp(value, vec3(0), vec3(1)),1);
+    FragColor = vec4(clamp(value, vec3(0), vec3(1)),1);
 	dbgEd = true;
 	#endif
 }
@@ -338,8 +340,7 @@ bool intersectBox(vec3 ro, vec3 rd, int num, float tm, out float t, out vec3 nor
 	return true;
 }
 
-// torus section
-float uit=0.;
+// begin torus section
 vec2 cmul(vec2 c1, vec2 c2){
 	return vec2(c1.x*c2.x-c1.y*c2.y,c1.x*c2.y+c1.y*c2.x);
 }
@@ -377,7 +378,6 @@ bool intersectTorus( in vec3 ro, in vec3 rd, int num, float tm, out float t ){
 		e = max(e,DKstep(c2, c3, c0, c1, ro, rd, torus.form));
 		e = max(e,DKstep(c3, c0, c1, c2, ro, rd, torus.form));
 		if(e<eps) break;
-		uit+=1.;
 	}
 	vec4 rs= vec4(c0.x, c1.x, c2.x, c3.x);
 	vec4 ri= abs(vec4(c0.y, c1.y, c2.y, c3.y));
@@ -646,9 +646,6 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type, 
 	if (type == TYPE_TORUS) {
 		hr = hit_record(toruses[num].mat, getTorusNormal(ro, rd, tm, num));
 	}
-	// if (type == TYPE_POINT_LIGHT) {
-	// 	hr = hit_record(empty_mat, vec3(0));
-	// }
 	return hr;
 }
 
@@ -677,7 +674,7 @@ void main()
 	#if AIM_ENABLED
 	if (pixel_coords == vec2(scene.canvas_width / 2, scene.canvas_height / 2))
 	{
-		gl_FragColor = vec4(1);
+		FragColor = vec4(1);
 		return;
 	}
 	#endif
@@ -774,8 +771,8 @@ void main()
 		}
 	}
 	#if DBG == 0
-	gl_FragColor = vec4(color,1);
+	FragColor = vec4(color,1);
 	#else
-	if (!dbgEd) gl_FragColor = vec4(0);
+	if (!dbgEd) FragColor = vec4(0);
 	#endif
 }

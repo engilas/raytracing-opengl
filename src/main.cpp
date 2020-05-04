@@ -5,7 +5,6 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
-#include <stb_image.h>
 
 static int wind_width = 660;
 static int wind_height = 960;
@@ -123,11 +122,6 @@ int main()
 
 void updateScene(scene_container& scene, float time)
 {
-	//rt_sphere* blueSphere = &scene.spheres[0];
-	//rotateXZ(&blueSphere->obj.x, &blueSphere->obj.z, time);
-	//blueSphere->obj.x = cos(time) * 10;
-	//blueSphere->obj.z = sin(time) * 10;
-	
 	rt_sphere* planet = &scene.spheres[2];
 	planet->obj.x = cos(time / 50) * 7000;
 	planet->obj.z = sin(time / 50) * 7000;
