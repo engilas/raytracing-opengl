@@ -51,14 +51,14 @@ int main()
 	scene.lights_direct.push_back(SceneManager::create_light_direct({ 3, -1, 1 }, { 1, 1, 1 }, 1.5));
 
 	// floor
-	scene.planes.push_back(SceneManager::create_plane({ 0, 1, 0 }, { 0, -1, 0 }, 
-		SceneManager::create_material({ 1, 0.7, 0 }, 100, 0.1)));
+	scene.boxes.push_back(SceneManager::create_box({ 0, -1.2, 6 }, { 10, 0.2, 5 },
+		SceneManager::create_material({ 1, 0.6, 0 }, 100, 0.05)));
 	// box
 	scene.boxes.push_back(SceneManager::create_box({ 8, 1, 6 }, { 1, 1, 1 }, 
-		SceneManager::create_material({ 0.8,0.7,1 }, 50, 0.1)));
+		SceneManager::create_material({ 0.8,0.7,0 }, 50, 0.1)));
 	// torus
 	scene.toruses.push_back(SceneManager::create_torus({ -9, 0.5, 6 }, { 1.0, 0.5 },
-		SceneManager::create_material({ 0.1, 0.4, 1 }, 200, 0.2)));
+		SceneManager::create_material({ 0.5, 0.4, 1 }, 200, 0.2)));
 
 	// cone
 	rt_material coneMaterial = SceneManager::create_material({ 234 / 255.0f, 17 / 255.0f, 82 / 255.0f }, 200, 0.2);
@@ -132,7 +132,7 @@ void updateScene(scene_container& scene, float time)
 	planet->obj.x = cos(time / 50) * 7000;
 	planet->obj.z = sin(time / 50) * 7000;
 
-	rt_box* box = &scene.boxes[0];
+	rt_box* box = &scene.boxes[1];
 	box->quat_rotation = getQuaternion({ 0.5774,0.5774,0.5774 }, time * 20);
 
 	rt_torus* torus = &scene.toruses[0];
