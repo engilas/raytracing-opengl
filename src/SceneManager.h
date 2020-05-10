@@ -19,7 +19,8 @@ public:
 	static rt_plane create_plane(vec3 normal, vec3 pos, rt_material material);
 	static rt_box create_box(vec3 pos, vec3 form, rt_material material);
 	static rt_torus create_torus(vec3 pos, vec2 form, rt_material material);
-	static rt_light_point create_light_point(vec4 position, vec3 color, float intensity);
+	static rt_ring create_ring(vec3 pos, float r1, float r2, rt_material material);
+	static rt_light_point create_light_point(vec4 position, vec3 color, float intensity, float linear_k = 0.22f, float quadratic_k = 0.2f);
 	static rt_light_direct create_light_direct(vec3 direction, vec3 color, float intensity);
 	static rt_scene create_scene(int width, int height);
 
@@ -50,6 +51,7 @@ private:
     GLuint surfaceUbo = 0;
     GLuint boxUbo = 0;
     GLuint torusUbo = 0;
+    GLuint ringUbo = 0;
 	GLuint lightPointUbo = 0;
 	GLuint lightDirectUbo = 0;
 

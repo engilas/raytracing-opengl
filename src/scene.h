@@ -12,6 +12,7 @@ struct rt_defines
 	int surface_size;
 	int box_size;
 	int torus_size;
+	int ring_size;
 	int light_point_size;
 	int light_direct_size;
 	int iterations;
@@ -36,10 +37,11 @@ typedef struct {
 
 typedef struct {
 	rt_material material;
-	// pos + radius
-	vec4 obj;
+	vec4 obj; // pos + radius
+	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	int textureNum;
 	bool hollow;
-	float __padding[3];
+	float __padding[2];
 } rt_sphere;
 
 typedef struct {
@@ -61,6 +63,14 @@ typedef struct {
 	vec3 pos; float __p1;
 	vec2 form; float __p2[2];
 } rt_torus;
+
+typedef struct {
+	rt_material mat;
+	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	vec3 pos; int textureNum;
+	float r1, r2;
+	float __p2[2];
+} rt_ring;
 
 typedef struct {
 	rt_material mat;
@@ -96,8 +106,11 @@ struct rt_light_direct {
 struct rt_light_point {
 	vec4 pos; //pos + radius
 	vec3 color;
-
 	float intensity;
+	
+	float linear_k;
+	float quadratic_k;
+	float __padding[2];
 };
 
 typedef struct {
@@ -122,6 +135,7 @@ struct scene_container
 	std::vector<rt_surface> surfaces;
 	std::vector<rt_box> boxes;
 	std::vector<rt_torus> toruses;
+	std::vector<rt_ring> rings;
 	std::vector<rt_light_point> lights_point;
 	std::vector<rt_light_direct> lights_direct;
 
@@ -132,6 +146,7 @@ struct scene_container
 			static_cast<int>(surfaces.size()),
 			static_cast<int>(boxes.size()),
 			static_cast<int>(toruses.size()),
+			static_cast<int>(rings.size()),
 			static_cast<int>(lights_point.size()),
 			static_cast<int>(lights_direct.size()),
 			scene.reflect_depth, ambient_color, shadow_ambient};

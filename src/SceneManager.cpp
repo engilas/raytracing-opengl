@@ -181,10 +181,6 @@ rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material mat
 	rt_sphere sphere = {};
 	sphere.obj = { center.x, center.y, center.z, radius };
 	sphere.hollow = hollow;
-
-	// sphere.pos = center;
-	// sphere.radius = radius;
-	//
 	sphere.material = material;
 
 	return sphere;
@@ -217,13 +213,26 @@ rt_torus SceneManager::create_torus(vec3 pos, vec2 form, rt_material material)
     return torus;
 }
 
-rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float intensity)
+rt_ring SceneManager::create_ring(vec3 pos, float r1, float r2, rt_material material)
+{
+	rt_ring ring = {};
+	ring.pos = pos;
+	ring.mat = material;
+	ring.r1 = r1 * r1;
+	ring.r2 = r2 * r2;
+    return ring;
+}
+
+rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float intensity, float linear_k,
+	float quadratic_k)
 {
 	rt_light_point light = {};
 
 	light.intensity = intensity;
 	light.pos = position;
 	light.color = color;
+	light.linear_k = linear_k;
+	light.quadratic_k = quadratic_k;
 
 	return light;
 }
@@ -252,107 +261,59 @@ rt_scene SceneManager::create_scene(int width, int height)
 	return scene;
 }
 
+template<typename T>
+void initBuffer(GLuint *ubo, int num, std::vector<T>& data)
+{
+	glGenBuffers(1, ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, *ubo);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(T) * data.size(), data.data(), GL_DYNAMIC_DRAW);
+	glBindBufferBase(GL_UNIFORM_BUFFER, num, *ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
 void SceneManager::initBuffers()
 {
 	glGenBuffers(1, &sceneUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_scene), NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_scene), NULL, GL_DYNAMIC_DRAW);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, sceneUbo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	glGenBuffers(1, &sphereUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_sphere) * scene->spheres.size(), scene->spheres.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 1, sphereUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	initBuffer(&sphereUbo, 1, scene->spheres);
+	initBuffer(&planeUbo, 2, scene->planes);
+	initBuffer(&surfaceUbo, 5, scene->surfaces);
+	initBuffer(&boxUbo, 6, scene->boxes);
+	initBuffer(&torusUbo, 7, scene->toruses);
+	initBuffer(&ringUbo, 8, scene->rings);
+	initBuffer(&lightPointUbo, 3, scene->lights_point);
+	initBuffer(&lightDirectUbo, 4, scene->lights_direct);
+}
 
-	glGenBuffers(1, &planeUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, planeUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_plane) * scene->planes.size(), scene->planes.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 2, planeUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	glGenBuffers(1, &surfaceUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, surfaceUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_surface) * scene->surfaces.size(), scene->surfaces.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 5, surfaceUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	glGenBuffers(1, &boxUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, boxUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_box) * scene->boxes.size(), scene->boxes.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 6, boxUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	glGenBuffers(1, &torusUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, torusUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_torus) * scene->toruses.size(), scene->toruses.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 7, torusUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	glGenBuffers(1, &lightPointUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, lightPointUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light_point) * scene->lights_point.size(), scene->lights_point.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 3, lightPointUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	glGenBuffers(1, &lightDirectUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, lightDirectUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_light_direct) * scene->lights_direct.size(), scene->lights_direct.data(), GL_STATIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 4, lightDirectUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+template<typename T>
+void updateBuffer(GLuint ubo, std::vector<T>& data)
+{
+	if (!data.empty())
+	{
+		glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+		GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
+		memcpy(p, data.data(), sizeof(T) * data.size());
+		glUnmapBuffer(GL_UNIFORM_BUFFER);
+	}
 }
 
 void SceneManager::updateBuffers() const
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
 	GLvoid* scene_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	memcpy(scene_p, scene, sizeof(rt_scene));
+	memcpy(scene_p, &scene->scene, sizeof(rt_scene));
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
-
-    if (!scene->spheres.empty())
-    {
-        glBindBuffer(GL_UNIFORM_BUFFER, sphereUbo);
-	    GLvoid* spheres_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(spheres_p, scene->spheres.data(), sizeof(rt_sphere) * scene->spheres.size());
-	    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    }
-    
-    if (!scene->planes.empty())
-    {
-        glBindBuffer(GL_UNIFORM_BUFFER, planeUbo);
-	    GLvoid* planes_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(planes_p, scene->planes.data(), sizeof(rt_plane) * scene->planes.size());
-	    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    }
-	if (!scene->surfaces.empty())
-    {
-        glBindBuffer(GL_UNIFORM_BUFFER, surfaceUbo);
-	    GLvoid* surfaces_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(surfaces_p, scene->surfaces.data(), sizeof(rt_surface) * scene->surfaces.size());
-	    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    }
-	if (!scene->boxes.empty())
-    {
-        glBindBuffer(GL_UNIFORM_BUFFER, boxUbo);
-	    GLvoid* boxes_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(boxes_p, scene->boxes.data(), sizeof(rt_box) * scene->boxes.size());
-	    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    }
-	if (!scene->toruses.empty())
-    {
-        glBindBuffer(GL_UNIFORM_BUFFER, torusUbo);
-	    GLvoid* toruses_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(toruses_p, scene->toruses.data(), sizeof(rt_torus) * scene->toruses.size());
-	    glUnmapBuffer(GL_UNIFORM_BUFFER);
-    }
-	if (!scene->lights_point.empty())
-	{
-		glBindBuffer(GL_UNIFORM_BUFFER, lightPointUbo);
-	    GLvoid* ptr = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	    memcpy(ptr, scene->lights_point.data(), sizeof(rt_light_point) * scene->lights_point.size());
-	    glUnmapBuffer(GL_UNIFORM_BUFFER);
-	}
+	updateBuffer(sphereUbo, scene->spheres);
+	updateBuffer(planeUbo, scene->planes);
+	updateBuffer(surfaceUbo, scene->surfaces);
+	updateBuffer(boxUbo, scene->boxes);
+	updateBuffer(torusUbo, scene->toruses);
+	updateBuffer(ringUbo, scene->rings);
+	updateBuffer(lightPointUbo, scene->lights_point);
 }
 
 vec3 SceneManager::getColor(float r, float g, float b)

@@ -152,6 +152,7 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 	replace(fpS, "{SURFACE_SIZE}", std::to_string(defines.surface_size));
 	replace(fpS, "{BOX_SIZE}", std::to_string(defines.box_size));
 	replace(fpS, "{TORUS_SIZE}", std::to_string(defines.torus_size));
+	replace(fpS, "{RING_SIZE}", std::to_string(defines.ring_size));
 	replace(fpS, "{LIGHT_POINT_SIZE}", std::to_string(defines.light_point_size));
 	replace(fpS, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
 	replace(fpS, "{ITERATIONS}", std::to_string(defines.iterations));
@@ -252,7 +253,7 @@ void GLWrapper::checkErrors(std::string desc)
 	}
 }
 
-unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces)
+unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool getMipmap)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -275,11 +276,50 @@ unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces)
 			stbi_image_free(data);
 		}
 	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	if (getMipmap)
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, getMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	return textureID;
+}
+
+unsigned int GLWrapper::loadTexture(char const* path, GLuint wrapMode)
+{
+	unsigned int textureID;
+	glGenTextures(1, &textureID);
+
+	int width, height, nrComponents;
+	unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+	if (data)
+	{
+		GLenum format;
+		if (nrComponents == 1)
+			format = GL_RED;
+		else if (nrComponents == 3)
+			format = GL_RGB;
+		else if (nrComponents == 4)
+			format = GL_RGBA;
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		std::cout << "Texture failed to load at path: " << path << std::endl;
+		stbi_image_free(data);
+	}
 
 	return textureID;
 }

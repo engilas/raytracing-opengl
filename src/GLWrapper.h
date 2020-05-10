@@ -28,7 +28,8 @@ public:
 	GLFWwindow* window;
 
     void draw();
-	static unsigned loadCubemap(std::vector<std::string> faces);
+	static unsigned loadCubemap(std::vector<std::string> faces, bool getMipmap = false);
+	static unsigned loadTexture(char const* path, GLuint wrapMode = GL_REPEAT);
 
 	GLuint renderHandle;
 
