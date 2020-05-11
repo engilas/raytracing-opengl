@@ -1,18 +1,8 @@
 #version 430
 
-#define MAX_RECURSION_DEPTH 5
-
-#define T_MIN 0.001f
-#define REFLECT_BIAS 0.001f
-#define SHADOW_BIAS 0.0001f
-
 #define FLT_MIN 1.175494351e-38
 #define FLT_MAX 3.402823466e+38
 #define PI_F 3.14159265358979f
-
-#define LIGHT_AMBIENT 0
-#define LIGHT_POINT 1
-#define LIGHT_DIRECT 2
 
 #define TYPE_SPHERE 0
 #define TYPE_PLANE 1
@@ -27,7 +17,6 @@
 
 #define TOTAL_INTERNAL_REFLECTION 1
 #define DO_FRESNEL 1
-#define AIM_ENABLED 1
 #define PLANE_ONESIDE 1
 #define REFLECT_REDUCE_ITERATION 1
 
@@ -36,8 +25,8 @@ struct rt_material {
 	vec3 absorb;
 
 	float diffuse;
-	float x; // reflection
-	float y; // refraction
+	float reflection;
+	float refraction;
 	int specular;
 	float kd;
 	float ks;
@@ -123,7 +112,7 @@ struct rt_scene {
 
 struct hit_record {
 	rt_material mat;
-  	vec3 n;
+  	vec3 normal;
 	float bias_mult;
 	float alpha;
 };
@@ -335,25 +324,25 @@ vec4 getSphereTexture(vec3 sphereNormal, vec4 quat, int texNum) {
 	return color;
 }
 
-bool intersectSphere(vec3 ro, vec3 rd, vec4 sp, bool hollow, float tm, out float t)
+bool intersectSphere(vec3 ro, vec3 rd, vec4 object, bool hollow, float tmin, out float t)
 {
     bool r = false;
-	vec3 v = ro - sp.xyz;
-	float b = dot(v,rd);
-	float c = dot(v,v) - sp.w*sp.w;
-	t = b*b-c;
-    if( t > 0.0 )
+	vec3 v = ro - object.xyz; // pos
+	float b = dot(v, rd);
+	float c = dot(v, v) - object.w * object.w;
+	t = b * b - c;
+    if(t > 0.0)
     {
 		float sqrt_ = sqrt(t);
 		t = -b - sqrt_;
 		if (hollow && t < 0.0) 
 			t = - b + sqrt_;
-		r = (t > 0.0) && (t < tm);
+		r = (t > 0.0) && (t < tmin);
     } 
     return r;
 }
 
-bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
+bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tmin, out float t) {
 	float denom = clamp(dot(n, rd), -1, 1); 
 	#ifdef PLANE_ONESIDE
 		if (denom < -1e-6) 
@@ -363,13 +352,13 @@ bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tm, out float t) {
 	{
         vec3 p_ro = p - ro; 
         t = dot(p_ro, n) / denom; 
-        return (t > 0) && (t < tm);
+        return (t > 0) && (t < tmin);
     } 
  
     return false; 
 }
 
-bool intersectRing(vec3 ro, vec3 rd, int num, float tm, out float t, out vec2 uv) {
+bool intersectRing(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec2 uv) {
 	rt_ring ring = rings[num];
 	rd = rotate(ring.quat_rotation, rd);
 	ro = rotate(ring.quat_rotation, ro - ring.pos);
@@ -381,7 +370,7 @@ bool intersectRing(vec3 ro, vec3 rd, int num, float tm, out float t, out vec2 uv
 
 	float p = x * x + y * y;
 
-	if (t > 0 && t < tm && p < ring.r2 && p > ring.r1) {
+	if (t > 0 && t < tmin && p < ring.r2 && p > ring.r1) {
 		float cosv = dot(normalize(vec2(x, y)), vec2(1, 0));
 		uv = vec2((p - ring.r1) / (ring.r2 - ring.r1), cosv);
 		return true;
@@ -396,7 +385,7 @@ vec4 getRingTexture(int num, vec2 uv) {
 	return texture(getTexture(num), uv);
 }
 
-bool intersectBox(vec3 ro, vec3 rd, int num, float tm, out float t, out vec3 normal) 
+bool intersectBox(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec3 normal) 
 {
 	rt_box box = boxes[num];
     // convert from ray to box space
@@ -416,7 +405,7 @@ bool intersectBox(vec3 ro, vec3 rd, int num, float tm, out float t, out vec3 nor
 	
 	if( tN > tF || tF < 0.0) return false;
     
-	if (tN >= tm)
+	if (tN >= tmin)
 		return false;
 
 	vec3 nor = -sign(rdd)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
@@ -450,7 +439,7 @@ float DKstep(inout vec2 c0, vec2 c1, vec2 c2, vec2 c3, in vec3 ro, in vec3 rd, i
 	c0-=fc;
 	return max(abs(fc.x),abs(fc.y));
 }
-bool intersectTorus( in vec3 ro, in vec3 rd, int num, float tm, out float t ){
+bool intersectTorus( in vec3 ro, in vec3 rd, int num, float tmin, out float t ){
 	float eps = 0.001;
 	rt_torus torus = toruses[num];
 	ro = rotate(torus.quat_rotation, ro - torus.pos);
@@ -474,7 +463,7 @@ bool intersectTorus( in vec3 ro, in vec3 rd, int num, float tm, out float t ){
 	if(ri.z>eps || rs.z<0.) rs.z=10000.;
 	if(ri.w>eps || rs.w<0.) rs.w=10000.;
 	t = min(min(rs.x,rs.y),min(rs.z,rs.w));
-	return t > 0 && t < 100 && t < tm;
+	return t > 0 && t < 100 && t < tmin;
 }
 vec3 getTorusNormal(vec3 ro, vec3 rd, float t, int num)
 {
@@ -501,7 +490,7 @@ bool checkSurfaceEdges(vec3 o, vec3 d, inout float tMin, inout float tMax, vec3 
 	}
 	return true;
 }
-bool intersectSurface(vec3 ro, vec3 rd, int num, float tm, out float t)
+bool intersectSurface(vec3 ro, vec3 rd, int num, float tmin, out float t)
 {
 	vec3 orig_ro = ro;
 	vec3 orig_rd = rd;
@@ -532,7 +521,7 @@ bool intersectSurface(vec3 ro, vec3 rd, int num, float tm, out float t)
 	if (abs(p2) < 1e-6)
 	{
 		t = -p3 / p1;
-		return t > tm;
+		return t > tmin;
 	}
 
 	float min = FLT_MAX;
@@ -559,7 +548,7 @@ bool intersectSurface(vec3 ro, vec3 rd, int num, float tm, out float t)
 		return false;
 
 	t = min;
-	return t < tm;
+	return t < tmin;
 }
 vec3 getSurfaceNormal(vec3 ro, vec3 rd, float t, int num) {
 	rt_surface surface = surfaces[num];
@@ -577,66 +566,64 @@ vec3 getSurfaceNormal(vec3 ro, vec3 rd, float t, int num) {
 
 float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal, out vec2 opt_uv)
 {
-	float tm = maxDist;
+	float tmin = maxDist;
 	float t;
 	for (int i = 0; i < PLANE_SIZE; i++) {
-		if (intersectPlane(ro, rd, planes[i].normal, planes[i].pos, tm, t)) {
-			num = i; tm = t; type = TYPE_PLANE;
+		if (intersectPlane(ro, rd, planes[i].normal, planes[i].pos, tmin, t)) {
+			num = i; tmin = t; type = TYPE_PLANE;
 		}
 	}
 	for (int i = 0; i < SPHERE_SIZE; i++) {
-		if (intersectSphere(ro, rd, spheres[i].obj, spheres[i].hollow, tm, t)) {
-			num = i; tm = t; type = TYPE_SPHERE;
+		if (intersectSphere(ro, rd, spheres[i].obj, spheres[i].hollow, tmin, t)) {
+			num = i; tmin = t; type = TYPE_SPHERE;
 		}
 	}
 	for (int i = 0; i < SURFACE_SIZE; i++) {
-		if (intersectSurface(ro, rd, i, tm, t)) {
-			num = i; tm = t; type = TYPE_SURFACE;
+		if (intersectSurface(ro, rd, i, tmin, t)) {
+			num = i; tmin = t; type = TYPE_SURFACE;
 		}
 	}
 	for (int i = 0; i < BOX_SIZE; i++) {
-		if (intersectBox(ro, rd, i, tm, t, opt_normal)) {
-			num = i; tm = t; type = TYPE_BOX;
+		if (intersectBox(ro, rd, i, tmin, t, opt_normal)) {
+			num = i; tmin = t; type = TYPE_BOX;
 		}
 	}
 	for (int i = 0; i < TORUS_SIZE; i++) {
-		if (intersectTorus(ro, rd, i, tm, t)) {
-			num = i; tm = t; type = TYPE_TORUS;
+		if (intersectTorus(ro, rd, i, tmin, t)) {
+			num = i; tmin = t; type = TYPE_TORUS;
 		}
 	}
 	for (int i = 0; i < RING_SIZE; i++) {
-		if (intersectRing(ro, rd, i, tm, t, opt_uv)) {
-			num = i; tm = t; type = TYPE_RING;
+		if (intersectRing(ro, rd, i, tmin, t, opt_uv)) {
+			num = i; tmin = t; type = TYPE_RING;
 		}
 	}
 	for (int i = 0; i < LIGHT_POINT_SIZE; i++) {
-		if (intersectSphere(ro, rd, lights_point[i].pos, false, tm, t)) {
-			num = i; tm = t; type = TYPE_POINT_LIGHT;
+		if (intersectSphere(ro, rd, lights_point[i].pos, false, tmin, t)) {
+			num = i; tmin = t; type = TYPE_POINT_LIGHT;
 		}
 	}
 	
- 	return tm;
+ 	return tmin;
 }
 
-// todo: colored shadows from refracted objects
-float inShadow(vec3 ro, vec3 rd, float d)
+float inShadow(vec3 ro, vec3 rd, float dist)
 {
-	bool ret = false;
 	float t;
 	vec3 opt_normal;
 	vec2 opt_uv;
 	float shadow = 0;
 	
 	for (int i = 0; i < SPHERE_SIZE; i++)
-		if(intersectSphere(ro, rd, spheres[i].obj, false, d, t)) {shadow = 1;}
+		if(intersectSphere(ro, rd, spheres[i].obj, false, dist, t)) {shadow = 1;}
 	for (int i = 0; i < SURFACE_SIZE; i++)
-		if(intersectSurface(ro, rd, i, d, t)) {shadow = 1;}
+		if(intersectSurface(ro, rd, i, dist, t)) {shadow = 1;}
 	for (int i = 0; i < BOX_SIZE; i++)
-		if(intersectBox(ro, rd, i, d, t, opt_normal)) {shadow = 1;}
+		if(intersectBox(ro, rd, i, dist, t, opt_normal)) {shadow = 1;}
 	for (int i = 0; i < TORUS_SIZE; i++)
-		if(intersectTorus(ro, rd, i, d, t)) {shadow = 1;}
+		if(intersectTorus(ro, rd, i, dist, t)) {shadow = 1;}
 	for (int i = 0; i < RING_SIZE; i++)
-		if(intersectRing(ro, rd, i, d, t, opt_uv)) {
+		if(intersectRing(ro, rd, i, dist, t, opt_uv)) {
 			rt_ring ring = rings[i];
 			if (ring.textureNum > 0) {
 				shadow += getRingTexture(ring.textureNum, opt_uv).a;
@@ -646,68 +633,67 @@ float inShadow(vec3 ro, vec3 rd, float d)
 		}
 	#if PLANE_ONESIDE == 0
 	for (int i = 0; i < PLANE_SIZE; i++)
-		if(intersectPlane(ro,rd, planes[i].normal,planes[i].pos,d,t)) {shadow = 1;}
+		if(intersectPlane(ro, rd, planes[i].normal, planes[i].pos, dist, t)) {shadow = 1;}
 	#endif
 
 	return min(shadow, 1);
 }
 
-void calcShade2(vec3 l, vec3 lcol, float intensity, vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float dist, float distDiv, inout vec3 diffuse, inout vec3 specular) {
-	l = normalize(l);
+void calcShade2(vec3 light_dir, vec3 light_color, float intensity, vec3 pt, vec3 rd, rt_material material, vec3 normal, bool doShadow, float dist, float distDiv, inout vec3 diffuse, inout vec3 specular) {
+	light_dir = normalize(light_dir);
 	// diffuse
-	float dp = clamp(dot(n, l), 0.0, 1.0);
-	lcol *= dp;
+	float dp = clamp(dot(normal, light_dir), 0.0, 1.0);
+	light_color *= dp;
 	#if SHADOW_ENABLED
 	if (doShadow) {
-		vec3 shadow = vec3(1 - inShadow(pt, l, dist));
-		lcol *= max(shadow, SHADOW_AMBIENT);
+		vec3 shadow = vec3(1 - inShadow(pt, light_dir, dist));
+		light_color *= max(shadow, SHADOW_AMBIENT);
 	}
 	#endif
-	diffuse += lcol * col * albedo * intensity / distDiv;
+	diffuse += light_color * material.color * material.diffuse * intensity / distDiv;
 	
 	//specular
-	if (specPower > 0) {
-		vec3 reflection = reflect(l, n);
+	if (material.specular > 0) {
+		vec3 reflection = reflect(light_dir, normal);
 		float specDp = clamp(dot(rd, reflection), 0.0, 1.0);
-		specular += lcol * pow(specDp, specPower) * intensity / distDiv;
+		specular += light_color * pow(specDp, material.specular) * intensity / distDiv;
 	}
 }
 
-// todo pass material
-vec3 calcShade(vec3 pt, vec3 rd, vec3 col, float albedo, vec3 n, float specPower, bool doShadow, float kd, float ks)
+vec3 calcShade(vec3 pt, vec3 rd, rt_material material, vec3 normal, bool doShadow)
 {
 	float dist, distDiv;
-	vec3 lcol,l;
+	vec3 light_color, light_dir;
 	vec3 diffuse = vec3(0);
 	vec3 specular = vec3(0);
 
-	vec3 pixelColor = AMBIENT_COLOR * col;
+	vec3 pixelColor = AMBIENT_COLOR * material.color;
 
 	for (int i = 0; i < LIGHT_POINT_SIZE; i++) {
 		rt_light_point light = lights_point[i];
-		lcol = light.color;
-		l = light.pos.xyz - pt;
-		dist = length(l);
+		light_color = light.color;
+		light_dir = light.pos.xyz - pt;
+		dist = length(light_dir);
 		distDiv = 1 + light.linear_k * dist + light.quadratic_k * dist * dist;
 
-		calcShade2(l, lcol, light.intensity, pt, rd, col, albedo, n, specPower, doShadow, dist, distDiv, diffuse, specular);
+		calcShade2(light_dir, light_color, light.intensity, pt, rd, material, normal, doShadow, dist, distDiv, diffuse, specular);
 	}
 	for (int i = 0; i < LIGHT_DIRECT_SIZE; i++) {
-		lcol = lights_direct[i].color;
-		l = - lights_direct[i].direction;
+		light_color = lights_direct[i].color;
+		light_dir = - lights_direct[i].direction;
 		dist = maxDist;
 		distDiv = 1;
 
-		calcShade2(l, lcol, lights_direct[i].intensity, pt, rd, col, albedo, n, specPower, doShadow, dist, distDiv, diffuse, specular);
+		calcShade2(light_dir, light_color, lights_direct[i].intensity, pt, rd, material, normal, doShadow, dist, distDiv, diffuse, specular);
 	}
-	pixelColor += diffuse * kd + specular * ks;
+	pixelColor += diffuse * material.kd + specular * material.ks;
 	return pixelColor;
 }
 
-float getFresnel(vec3 n,vec3 rd,float r0)
+float getFresnel(vec3 normal, vec3 rd, float reflection)
 {
-    float ndotv = clamp(dot(n, -rd), 0.0, 1.0);
-	return r0 + (1.0 - r0) * pow(1.0 - ndotv, 5.0);
+    float ndotv = clamp(dot(normal, -rd), 0.0, 1.0);
+	return reflection + (1.0 - reflection) * pow(1.0 - ndotv, 5.0);
 }
 
 float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, float refl)
@@ -737,13 +723,13 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
     #endif
 }
 
-hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type, vec3 opt_normal, vec2 opt_uv) {
+hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float t, int num, int type, vec3 opt_normal, vec2 opt_uv) {
 	hit_record hr;
 	if (type == TYPE_SPHERE) {
 		rt_sphere sphere = spheres[num];
 		hr = hit_record(sphere.mat, normalize(pt - sphere.obj.xyz), 0, 1);
 		if (sphere.textureNum != 0) {
-			vec4 texColor = getSphereTexture(hr.n, sphere.quat_rotation, sphere.textureNum);
+			vec4 texColor = getSphereTexture(hr.normal, sphere.quat_rotation, sphere.textureNum);
 			hr.mat.color = texColor.rgb;
 			hr.alpha = texColor.a;
 		}
@@ -752,13 +738,13 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type, 
 		hr = hit_record(planes[num].mat, normalize(planes[num].normal), 0, 1);
 	}
 	if (type == TYPE_SURFACE) {
-		hr = hit_record(surfaces[num].mat, getSurfaceNormal(ro, rd, tm, num), 0, 1);
+		hr = hit_record(surfaces[num].mat, getSurfaceNormal(ro, rd, t, num), 0, 1);
 	}
 	if (type == TYPE_BOX) {
 		hr = hit_record(boxes[num].mat, opt_normal, 0, 1);
 	}
 	if (type == TYPE_TORUS) {
-		hr = hit_record(toruses[num].mat, getTorusNormal(ro, rd, tm, num), 0, 1);
+		hr = hit_record(toruses[num].mat, getTorusNormal(ro, rd, t, num), 0, 1);
 	}
 	if (type == TYPE_RING) {
 		rt_ring ring = rings[num];
@@ -782,14 +768,14 @@ vec3 getReflectedColor(vec3 ro, vec3 rd)
 	vec3 pt, opt_normal;
 	vec2 opt_uv;
 	int num, type;
-	float tm = calcInter(ro, rd, num, type, opt_normal, opt_uv);
+	float t = calcInter(ro, rd, num, type, opt_normal, opt_uv);
 	if (type == TYPE_POINT_LIGHT) return lights_point[num].color;
 	hit_record hr;
-	if(tm < maxDist) {
-		pt = ro + rd * tm;
-		hr = get_hit_info(ro, rd, pt, tm, num, type, opt_normal, opt_uv);
-		ro = dot(rd, hr.n) < 0 ? pt + hr.n * hr.bias_mult : pt - hr.n * hr.bias_mult;
-		color = calcShade(ro, rd, hr.mat.color, hr.mat.diffuse, hr.n, hr.mat.specular, true, hr.mat.kd, hr.mat.ks);
+	if(t < maxDist) {
+		pt = ro + rd * t;
+		hr = get_hit_info(ro, rd, pt, t, num, type, opt_normal, opt_uv);
+		ro = dot(rd, hr.normal) < 0 ? pt + hr.normal * hr.bias_mult : pt - hr.normal * hr.bias_mult;
+		color = calcShade(ro, rd, hr.mat, hr.normal, true);
 	}
 	return color;
 }
@@ -800,13 +786,6 @@ void main()
 	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height){
 		return;
 	}
-	#if AIM_ENABLED
-	if (pixel_coords == vec2(scene.canvas_width / 2, scene.canvas_height / 2))
-	{
-		FragColor = vec4(1);
-		return;
-	}
-	#endif
 
 	float reflectMultiplier,refractMultiplier,tm;
 	vec3 col;
@@ -839,28 +818,26 @@ void main()
 				break;
 			}
 
-			col = hr.mat.color;
-			mat= hr.mat;
-			n = hr.n;
+			mat = hr.mat;
+			n = hr.normal;
 
 			bool outside = dot(rd, n) < 0;
 			n = outside ? n : -n;
 
 			#if TOTAL_INTERNAL_REFLECTION
-			//float reflIdx = mat.y > 0 ? mat.y : REFRACTIVE_INDEX_AIR;
-			if (mat.y > 0) 
-				reflectMultiplier = FresnelReflectAmount( outside ? 1 : mat.y,
-													  	  outside ? mat.y : 1,
-											 		      rd, n, mat.x);
-			else reflectMultiplier = getFresnel(n,rd,mat.x);
+			if (mat.refraction > 0) 
+				reflectMultiplier = FresnelReflectAmount( outside ? 1 : mat.refraction,
+													  	  outside ? mat.refraction : 1,
+											 		      rd, n, mat.reflection);
+			else reflectMultiplier = getFresnel(n,rd,mat.reflection);
 			#else
-			reflectMultiplier = getFresnel(n,rd,mat.x);
+			reflectMultiplier = getFresnel(n,rd,mat.reflection);
 			#endif
 			refractMultiplier = 1 - reflectMultiplier;
 
-			if(mat.y > 0.0) // Refractive
+			if(mat.refraction > 0.0) // Refractive
 			{
-				if (outside && mat.x > 0)
+				if (outside && mat.reflection > 0)
 				{
 					color += getReflectedColor(pt + n * hr.bias_mult, reflect(rd, n)) * reflectMultiplier * mask;
 					mask *= refractMultiplier;
@@ -876,21 +853,21 @@ void main()
 					break;
 				#endif
 				ro = pt - n * hr.bias_mult;
-				rd = refract(rd, n, outside ? 1 / mat.y : mat.y);
+				rd = refract(rd, n, outside ? 1 / mat.refraction : mat.refraction);
 				#ifdef REFLECT_REDUCE_ITERATION
 				i--;
 				#endif
 			}
-			else if(mat.x > 0.0) // Reflective
+			else if(mat.reflection > 0.0) // Reflective
 			{
 				ro = pt + n * hr.bias_mult;
-				color += calcShade(ro, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks)* refractMultiplier * mask;
+				color += calcShade(ro, rd, mat, n, true) * refractMultiplier * mask;
 				rd = reflect(rd, n);
 				mask *= reflectMultiplier;
 			}
 			else // Diffuse
 			{
-				color += calcShade(pt + n * hr.bias_mult, rd, col, mat.diffuse, n, mat.specular, true, mat.kd, mat.ks) * mask * hr.alpha;
+				color += calcShade(pt + n * hr.bias_mult, rd, mat, n, true) * mask * hr.alpha;
 				if (hr.alpha < 1) {
 					ro = pt - n * hr.bias_mult;
 					mask *= 1 - hr.alpha;

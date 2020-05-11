@@ -12,7 +12,7 @@ static int wind_height = 960;
 /*
  * todo
  * box textures
- * refactoring (proj structure, use glm, formatting)
+ * refactoring (proj structure, formatting)
  * AA
  */
 
@@ -84,9 +84,6 @@ int main()
 		rt_ring ring = SceneManager::create_ring({}, saturnRadius * 1.1166, saturnRadius * 2.35,
 			SceneManager::create_material({}, 0, 0));
 		ring.textureNum = 3;
-		// const float xAxis[] = { 1,0,0 };
-		// const float yAxis[] = { 0,1,0 };
-		// Quaternion<float> q1()
 		ring.quat_rotation = glm::angleAxis(glm::radians(90.f), glm::vec3(1, 0, 0)) * saturnPitch;
 		scene.rings.push_back(ring);
 		update::saturn_rings = scene.rings.size() - 1;
