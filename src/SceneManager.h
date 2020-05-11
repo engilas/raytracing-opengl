@@ -5,6 +5,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "quaternion.h"
+#include <glm/glm.hpp>
 
 class SceneManager 
 {
@@ -15,7 +16,7 @@ public:
 	void update(float frameRate);
 
 	static rt_material create_material(vec3 color, int specular, float reflect, float refract = 0.0, vec3 absorb = {}, float diffuse = 0.7, float kd = 0.8, float ks = 0.2);
-	static rt_sphere create_sphere(vec3 center, float radius, rt_material material, bool hollow = false);
+	static rt_sphere create_sphere(glm::vec3 center, float radius, rt_material material, bool hollow = false);
 	static rt_plane create_plane(vec3 normal, vec3 pos, rt_material material);
 	static rt_box create_box(vec3 pos, vec3 form, rt_material material);
 	static rt_torus create_torus(vec3 pos, vec2 form, rt_material material);
@@ -42,8 +43,15 @@ private:
 
 	float lastX = 0;
 	float lastY = 0;
-	float pitch = 0;
+	
+	// Camera Attributes
+	glm::vec3 position;
+	glm::vec3 front;
+	glm::vec3 right;
+	glm::vec3 world_up = glm::vec3(0, 1, 0);
+	// Euler Angles
 	float yaw = 0;
+	float pitch = 0;
 
 	GLuint sceneUbo = 0;
 	GLuint sphereUbo = 0;

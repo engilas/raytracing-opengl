@@ -3,6 +3,8 @@
 #include "primitives.h"
 #include <vector>
 #include "quaternion.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 #define PI_F 3.14159265358979f
 
 struct rt_defines
@@ -37,8 +39,8 @@ typedef struct {
 
 typedef struct {
 	rt_material material;
-	vec4 obj; // pos + radius
-	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	glm::vec4 obj; // pos + radius
+	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
 	int textureNum;
 	bool hollow;
 	float __padding[2];
@@ -52,7 +54,7 @@ typedef struct {
 
 typedef struct {
 	rt_material mat;
-	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
 	vec3 pos; float __p1;
 	vec3 form; float __p2;
 } rt_box;
@@ -66,7 +68,7 @@ typedef struct {
 
 typedef struct {
 	rt_material mat;
-	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
 	vec3 pos; int textureNum;
 	float r1, r2;
 	float __p2[2];
@@ -114,8 +116,8 @@ struct rt_light_point {
 };
 
 typedef struct {
-    vec4 quat_camera_rotation;
-	vec3 camera_pos; float __p1;
+    glm::quat quat_camera_rotation;
+	glm::vec3 camera_pos; float __p1;
 
 	vec3 bg_color;
 	int canvas_width;

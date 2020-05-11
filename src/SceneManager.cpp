@@ -1,6 +1,7 @@
 #include "SceneManager.h"
 #include "quaternion.h"
 #include <GLFW/glfw3.h>
+#include <glm/common.hpp>
 
 #define PI_F 3.14159265358979f
 
@@ -10,6 +11,7 @@ SceneManager::SceneManager(int wind_width, int wind_height, scene_container* sce
 	this->wind_height = wind_height;
 	this->wrapper = wrapper;
 	this->scene = scene;
+	this->position = scene->scene.camera_pos;
 }
 
 void SceneManager::init()
@@ -39,42 +41,14 @@ void SceneManager::update(float frameRate)
 	updateBuffers();
 }
 
-void SceneManager::multiplyVector(float v[3], float s) {
-	v[0] *= s;
-	v[1] *= s;
-	v[2] *= s;
-}
-
-void SceneManager::addVector(vec3 &v1, const float v2[3]) {
-	v1.x += v2[0];
-	v1.y += v2[1];
-	v1.z += v2[2];
-}
-
-void SceneManager::moveCamera(Quaternion<float> &q, const float direction[3], vec3 &vector, float speed) {
-	float tmp[3] = { direction[0], direction[1], direction[2] };
-	q.QuatRotation(tmp);
-	multiplyVector(tmp, speed);
-	addVector(vector, tmp);
-}
-
-void SceneManager::moveCamera(const float direction[3], vec3 &vector, float speed) {
-	float tmp[3] = { direction[0], direction[1], direction[2] };
-	multiplyVector(tmp, speed);
-	addVector(vector, tmp);
-}
-
 void SceneManager::UpdateScene(float frameRate)
 {
-	const float xAxis[3] = { 1, 0, 0 };
-	const float yAxis[3] = { 0, 1, 0 };
-	const float zAxis[3] = { 0, 0, 1 };
-	
-	Quaternion<float> qX(xAxis, -pitch * PI_F / 180.0f);
-	Quaternion<float> qY(yAxis, yaw * PI_F / 180.0f);
-	Quaternion<float> q = qY * qX;
-	scene->scene.quat_camera_rotation = q.GetStruct();
-
+	front.x = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front.y = sin(glm::radians(pitch));
+	front.z = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+	front = glm::normalize(front);
+	right = glm::normalize(glm::cross(-front, world_up));
+	scene->scene.quat_camera_rotation = glm::quat(glm::vec3(glm::radians(-pitch), glm::radians(yaw), 0));
 
 	auto speed = frameRate * 3;
 	if (shift_pressed)
@@ -82,19 +56,22 @@ void SceneManager::UpdateScene(float frameRate)
 	if (alt_pressed)
 		speed /= 6;
 
-	if (w_pressed)
-		moveCamera(q, zAxis, scene->scene.camera_pos, speed);
-	if (a_pressed)
-		moveCamera(q, xAxis, scene->scene.camera_pos, -speed);
-	if (s_pressed)
-		moveCamera(q, zAxis, scene->scene.camera_pos, -speed);
-	if (d_pressed)
-		moveCamera(q, xAxis, scene->scene.camera_pos, speed);
+	const glm::vec3 aq = front * speed*1e3f;
 
+	if (w_pressed)
+		position += front * speed;
+	if (a_pressed)
+		position -= right * speed;
+	if (s_pressed)
+		position -= front * speed;
+	if (d_pressed)
+		position += right * speed;
 	if (space_pressed)
-		moveCamera(yAxis, scene->scene.camera_pos, speed);
+		position += world_up * speed;
 	if (ctrl_pressed)
-		moveCamera(yAxis, scene->scene.camera_pos, -speed);
+		position -= world_up * speed;
+
+	scene->scene.camera_pos = position;
 }
 
 void SceneManager::glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -145,8 +122,6 @@ void SceneManager::glfw_mouse_callback(GLFWwindow* window, double xpos, double y
 	lastX = xpos;
 	lastY = ypos;
 
-
-
 	float sensitivity = 0.05f;
 	xoffset *= sensitivity;
 	yoffset *= sensitivity;
@@ -176,10 +151,10 @@ rt_material SceneManager::create_material(vec3 color, int specular, float reflec
     return material;
 }
 
-rt_sphere SceneManager::create_sphere(vec3 center, float radius, rt_material material, bool hollow)
+rt_sphere SceneManager::create_sphere(glm::vec3 center, float radius, rt_material material, bool hollow)
 {
 	rt_sphere sphere = {};
-	sphere.obj = { center.x, center.y, center.z, radius };
+	sphere.obj = glm::vec4(center, radius);
 	sphere.hollow = hollow;
 	sphere.material = material;
 

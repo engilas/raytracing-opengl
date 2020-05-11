@@ -30,6 +30,8 @@ namespace update {
 		torus = -1;
 }
 
+const glm::quat saturnPitch = glm::quat(glm::vec3(glm::radians(15.f), 0, 0));
+
 int main()
 {
 	GLWrapper glWrapper(false);
@@ -41,38 +43,40 @@ int main()
 	wind_height = glWrapper.getHeight();
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
-	scene.scene.camera_pos = {0, 0, -5};
-	scene.shadow_ambient = vec3{0.1, 0.1, 0.1};
-	scene.ambient_color = vec3{0.025, 0.025, 0.025};
+	scene.scene.camera_pos = { 0, 0, -5 };
+	scene.shadow_ambient = vec3{ 0.1, 0.1, 0.1 };
+	scene.ambient_color = vec3{ 0.025, 0.025, 0.025 };
 
 	// lights
 	scene.lights_point.push_back(SceneManager::create_light_point({ 3, 5, 0, 0.1 }, { 1, 1, 1 }, 25.5));
 	scene.lights_direct.push_back(SceneManager::create_light_direct({ 3, -1, 1 }, { 1, 1, 1 }, 1.5));
 
 	// blue sphere
-	scene.spheres.push_back(SceneManager::create_sphere({ 2, 0, 6 }, 1, 
+	scene.spheres.push_back(SceneManager::create_sphere({ 2, 0, 6 }, 1,
 		SceneManager::create_material({ 0, 0, 1 }, 50, 0.3)));
 	// transparent sphere
 	scene.spheres.push_back(SceneManager::create_sphere({ -1, 0, 6 }, 1,
-		SceneManager::create_material({ 1, 1, 1 }, 200, 0.1, 1.125, {1, 0, 2}, 1), true));
-	
+		SceneManager::create_material({ 1, 1, 1 }, 200, 0.1, 1.125, { 1, 0, 2 }, 1), true));
+
 	// jupiter
 	rt_sphere jupiter = SceneManager::create_sphere({}, 5000,
 		SceneManager::create_material({}, 0, 0.0f));
 	jupiter.textureNum = 1;
 	scene.spheres.push_back(jupiter);
 	update::jupiter = scene.spheres.size() - 1;
+	
 	// saturn
 	const int saturnRadius = 4150;
 	rt_sphere saturn = SceneManager::create_sphere({}, saturnRadius,
 		SceneManager::create_material({}, 0, 0.0f));
 	saturn.textureNum = 4;
+	saturn.quat_rotation = saturnPitch;
 	scene.spheres.push_back(saturn);
 	update::saturn = scene.spheres.size() - 1;
 
 	// mars
 	rt_sphere mars = SceneManager::create_sphere({}, 500,
-	SceneManager::create_material({}, 0, 0.0f));
+		SceneManager::create_material({}, 0, 0.0f));
 	mars.textureNum = 2;
 	scene.spheres.push_back(mars);
 	update::mars = scene.spheres.size() - 1;
@@ -85,7 +89,7 @@ int main()
 		// const float xAxis[] = { 1,0,0 };
 		// const float yAxis[] = { 0,1,0 };
 		// Quaternion<float> q1()
-		ring.quat_rotation = getQuaternion({ 1,0,0 }, 100);
+		ring.quat_rotation = glm::angleAxis(glm::radians(90.f), glm::vec3(1, 0, 0)) * saturnPitch;
 		scene.rings.push_back(ring);
 		update::saturn_rings = scene.rings.size() - 1;
 	}
@@ -94,7 +98,7 @@ int main()
 	scene.boxes.push_back(SceneManager::create_box({ 0, -1.2, 6 }, { 10, 0.2, 5 },
 		SceneManager::create_material({ 1, 0.6, 0 }, 100, 0.05)));
 	// box
-	scene.boxes.push_back(SceneManager::create_box({ 8, 1, 6 }, { 1, 1, 1 }, 
+	scene.boxes.push_back(SceneManager::create_box({ 8, 1, 6 }, { 1, 1, 1 },
 		SceneManager::create_material({ 0.8,0.7,0 }, 50, 0.1)));
 	update::box = scene.boxes.size() - 1;
 
@@ -134,7 +138,7 @@ int main()
 		"../assets/textures/sb_nebula/GalaxyTex_PositiveZ.jpg",
 		"../assets/textures/sb_nebula/GalaxyTex_NegativeZ.jpg"
 	};
-	
+
 	glWrapper.setSkybox(GLWrapper::loadCubemap(faces, false));
 
 	auto jupiterTex = loadTexture(1, "8k_jupiter.jpg", glWrapper);
@@ -145,11 +149,11 @@ int main()
 	SceneManager scene_manager(wind_width, wind_height, &scene, &glWrapper);
 	scene_manager.init();
 
-	glfwSwapInterval(2);
+	glfwSwapInterval(1);
 
 	auto start = std::chrono::steady_clock::now();
-    auto currentTime = std::chrono::steady_clock::now();
-    int frames_count = 0;
+	auto currentTime = std::chrono::steady_clock::now();
+	int frames_count = 0;
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, jupiterTex);
@@ -160,21 +164,21 @@ int main()
 	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, saturnTex);
 
-    while (!glfwWindowShouldClose(glWrapper.window))
-    {
-		
-        ++frames_count;
-        auto newTime = std::chrono::steady_clock::now();
+	while (!glfwWindowShouldClose(glWrapper.window))
+	{
+
+		++frames_count;
+		auto newTime = std::chrono::steady_clock::now();
 		std::chrono::duration<float> elapsed = (newTime - start);
 		std::chrono::duration<float> frameTime = (newTime - currentTime);
 		currentTime = newTime;
 
 		updateScene(scene, frameTime.count(), elapsed.count());
 		scene_manager.update(frameTime.count());
-        glWrapper.draw();
+		glWrapper.draw();
 		glfwSwapBuffers(glWrapper.window);
-        glfwPollEvents();
-    }
+		glfwPollEvents();
+	}
 
 	glWrapper.stop(); // stop glfw, close window
 	return 0;
@@ -196,52 +200,41 @@ void updateScene(scene_container& scene, float delta, float time)
 		const float jupiterSpeed = 0.02;
 		jupiter->obj.x = cos(time * jupiterSpeed) * 20000;
 		jupiter->obj.z = sin(time * jupiterSpeed) * 20000;
-		vec4 old_q = jupiter->quat_rotation;
-		Quaternion<float> prev(old_q.w, old_q.x, old_q.y, old_q.z);
-		const float x[] = {1,0,0};
-		const float y[] = {0,1,0};
-		// Quaternion<float> q1(x, 45 * PI_F / 180.);
-		// float rot[] = { 0,1,0 };
-		// q1.QuatRotation(rot);
-		// Quaternion<float> q2(rot, -time * 2.0 * PI_F / 180.);
 		
-		
-		jupiter->quat_rotation = getQuaternion({ 0,1,0.1 }, -time * 160);
+		jupiter->quat_rotation *= glm::angleAxis(delta / 15, glm::vec3(0, 1, 0));
 	}
 	
 	if (update::saturn != -1 && update::saturn_rings != -1) {
 		rt_sphere* saturn = &scene.spheres[update::saturn];
 		rt_ring* ring = &scene.rings[update::saturn_rings];
 		const float speed = 0.0082;
-		const float dist = 30000;
+		const float dist = 35000;
 		const float offset = 1;
 		
 		saturn->obj.x = cos(time * speed + offset) * dist;
 		saturn->obj.z = sin(time * speed + offset) * dist;
-		saturn->quat_rotation = getQuaternion({ 0,1,0 }, -time * 2);
 
+		glm::vec3 axis = glm::vec3(0, 1, 0) * saturnPitch;
+		saturn->quat_rotation *= glm::angleAxis(delta / 10, axis);
+	
 		ring->pos.x = cos(time * speed + offset) * dist;
 		ring->pos.z = sin(time * speed + offset) * dist;
-		// saturn->quat_rotation = getQuaternion({ 0,1,0 }, -time * 2);
 	}
-
+	
 	if (update::mars != -1) {
 		rt_sphere* mars = &scene.spheres[update::mars];
 		const float marsSpeed = 0.05;
 		mars->obj.x = cos(time * marsSpeed + 0.5f) * 10000;
 		mars->obj.z = sin(time * marsSpeed + 0.5f) * 10000;
 		mars->obj.y = -cos(time * marsSpeed) * 3000;
-		mars->quat_rotation = getQuaternion({ 0,1,0 }, -time * 10.f);
+		mars->quat_rotation *= glm::angleAxis(delta / 5, glm::vec3(0, 1, 0));
 	}
-
+	
 	if (update::box != -1)
 	{
 		rt_box* box = &scene.boxes[update::box];
-		vec4 old_q = box->quat_rotation;
-		Quaternion<float> prev(old_q.w, old_q.x, old_q.y, old_q.z);
-		const float axis[] = { 0.5774,0.5774,0.5774 };
-		Quaternion<float> next(axis, delta);
-		box->quat_rotation = (prev * next).GetStruct();
+		glm::quat q = glm::angleAxis(delta, glm::vec3(0.5774, 0.5774, 0.5774));
+		box->quat_rotation *= q;
 	}
 	
 	if (update::torus != -1)

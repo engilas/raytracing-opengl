@@ -770,7 +770,8 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float tm, int num, int type, 
 		}
 	}
 	float distance = length(pt - ro);
-	hr.bias_mult = (4e-3 * distance + 30) / 3e4;
+	hr.bias_mult = (9e-3 * distance + 35) / 35e3;
+
 	return hr;
 }
 
