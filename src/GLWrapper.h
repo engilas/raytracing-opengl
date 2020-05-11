@@ -1,11 +1,10 @@
 #pragma once
 
 #include <glad/glad.h>
-#include <assert.h>
-#include <stdio.h>
 #include <GLFW/glfw3.h>
 #include <string>
 #include <vector>
+#include <glm/glm.hpp>
 
 struct rt_defines;
 
@@ -48,6 +47,8 @@ private:
     static bool check_program_errors(GLuint program);
 
     static void checkErrors(std::string desc);
-	static GLuint genRenderProg(rt_defines defines);
+	static GLuint genRenderProg(rt_defines& defines);
+
+	static std::string to_string(glm::vec3 v);
 };
 

@@ -127,7 +127,7 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 	return true;
 }
 
-GLuint GLWrapper::genRenderProg(rt_defines defines)
+GLuint GLWrapper::genRenderProg(rt_defines& defines)
 {
     GLuint progHandle = glCreateProgram();
 	GLuint vp = glCreateShader(GL_VERTEX_SHADER);
@@ -156,8 +156,8 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 	replace(fpS, "{LIGHT_POINT_SIZE}", std::to_string(defines.light_point_size));
 	replace(fpS, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
 	replace(fpS, "{ITERATIONS}", std::to_string(defines.iterations));
-	replace(fpS, "{AMBIENT_COLOR}", defines.ambient_color.toString());
-	replace(fpS, "{SHADOW_AMBIENT}", defines.shadow_ambient.toString());
+	replace(fpS, "{AMBIENT_COLOR}", to_string(defines.ambient_color));
+	replace(fpS, "{SHADOW_AMBIENT}", to_string(defines.shadow_ambient));
 	//fpS.append('\0');
 	auto tmp = fpS.c_str();
 	source_len = fpS.size();
@@ -204,6 +204,11 @@ GLuint GLWrapper::genRenderProg(rt_defines defines)
 
 	checkErrors("Render shaders");
 	return progHandle;
+}
+
+std::string GLWrapper::to_string(glm::vec3 v)
+{
+	return std::string().append("vec3(").append(std::to_string(v.x)).append(",").append(std::to_string(v.y)).append(",").append(std::to_string(v.z)).append(")");
 }
 
 void GLWrapper::print_shader_info_log(GLuint shader) {
@@ -276,8 +281,9 @@ unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool getMipm
 			stbi_image_free(data);
 		}
 	}
-	if (getMipmap)
+	if (getMipmap) {
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	}
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, getMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

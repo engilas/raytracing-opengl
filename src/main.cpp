@@ -5,7 +5,6 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
-#include <stb_image.h>
 
 static int wind_width = 660;
 static int wind_height = 960;
@@ -17,7 +16,6 @@ static int wind_height = 960;
  * AA
  */
 
-vec4 getQuaternion(vec3 axis, float angle);
 void updateScene(scene_container& scene, float delta, float time);
 GLuint loadTexture(int num, const char* name, GLWrapper& glWrapper, GLuint wrapMode = GL_REPEAT);
 
@@ -44,8 +42,8 @@ int main()
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
 	scene.scene.camera_pos = { 0, 0, -5 };
-	scene.shadow_ambient = vec3{ 0.1, 0.1, 0.1 };
-	scene.ambient_color = vec3{ 0.025, 0.025, 0.025 };
+	scene.shadow_ambient = glm::vec3{ 0.1, 0.1, 0.1 };
+	scene.ambient_color = glm::vec3{ 0.025, 0.025, 0.025 };
 
 	// lights
 	scene.lights_point.push_back(SceneManager::create_light_point({ 3, 5, 0, 0.1 }, { 1, 1, 1 }, 25.5));
@@ -105,15 +103,17 @@ int main()
 	// *** beware! torus calculations is the most heavy part of rendering
 	// *** remove next line if you have performance issues
 	// torus
-	scene.toruses.push_back(SceneManager::create_torus({ -9, 0.5, 6 }, { 1.0, 0.5 },
-		SceneManager::create_material({ 0.5, 0.4, 1 }, 200, 0.2)));
+	rt_torus torus = SceneManager::create_torus({ -9, 0.5, 6 }, { 1.0, 0.5 },
+		SceneManager::create_material({ 0.5, 0.4, 1 }, 200, 0.2));
+	torus.quat_rotation = glm::quat(glm::vec3(glm::radians(45.f), 0, 0));
+	scene.toruses.push_back(torus);
 	update::torus = scene.toruses.size() - 1;
 
 	// cone
 	rt_material coneMaterial = SceneManager::create_material({ 234 / 255.0f, 17 / 255.0f, 82 / 255.0f }, 200, 0.2);
 	rt_surface cone = SurfaceFactory::GetEllipticCone(1 / 3.0f, 1 / 3.0f, 1, coneMaterial);
 	cone.pos = { -5, 4, 6 };
-	cone.quat_rotation = getQuaternion({ 1, 0, 0 }, 90);
+	cone.quat_rotation = glm::quat(glm::vec3(glm::radians(90.f), 0, 0));
 	cone.yMin = -1;
 	cone.yMax = 4;
 	scene.surfaces.push_back(cone);
@@ -122,7 +122,7 @@ int main()
 	rt_material cylinderMaterial = SceneManager::create_material({ 200 / 255.0f, 255 / 255.0f, 0 / 255.0f }, 200, 0.2);
 	rt_surface cylinder = SurfaceFactory::GetEllipticCylinder(1 / 2.0f, 1 / 2.0f, cylinderMaterial);
 	cylinder.pos = { 5, 0, 6 };
-	cylinder.quat_rotation = getQuaternion({ 1, 0, 0 }, 90);
+	cylinder.quat_rotation = glm::quat(glm::vec3(glm::radians(90.f), 0, 0));
 	cylinder.yMin = -1;
 	cylinder.yMax = 1;
 	scene.surfaces.push_back(cylinder);
@@ -240,19 +240,6 @@ void updateScene(scene_container& scene, float delta, float time)
 	if (update::torus != -1)
 	{
 		rt_torus* torus = &scene.toruses[update::torus];
-		const float xAxis[] = { 1,0,0 };
-		const float yAxis[] = { 0,1,0 };
-		Quaternion<float> q1(xAxis, 40 * PI_F / 180.0f);
-		Quaternion<float> q2(yAxis, time * 50 * PI_F / 180.0f);
-		torus->quat_rotation = (q1 * q2).GetStruct();
+		torus->quat_rotation *= glm::angleAxis(delta, glm::vec3(0, 1, 0));
 	}
-}
-
-vec4 getQuaternion(vec3 axis, float angle)
-{
-	float rad = angle * PI_F / 180.0f;
-	float dist = sqrtf(axis.x * axis.x + axis.y * axis.y + axis.z * axis.z);
-	float rotationAxis[] = { axis.x / dist, axis.y / dist, axis.z / dist };
-	Quaternion<float> quat(rotationAxis, rad);
-	return quat.GetStruct();
 }

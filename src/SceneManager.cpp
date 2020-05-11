@@ -1,5 +1,4 @@
 #include "SceneManager.h"
-#include "quaternion.h"
 #include <GLFW/glfw3.h>
 #include <glm/common.hpp>
 
@@ -135,7 +134,7 @@ void SceneManager::glfw_mouse_callback(GLFWwindow* window, double xpos, double y
 		pitch = -89.0f;
 }
 
-rt_material SceneManager::create_material(vec3 color, int specular, float reflect, float refract, vec3 absorb , float diffuse, float kd, float ks)
+rt_material SceneManager::create_material(glm::vec3 color, int specular, float reflect, float refract, glm::vec3 absorb , float diffuse, float kd, float ks)
 {
     rt_material material = {};
 
@@ -161,7 +160,7 @@ rt_sphere SceneManager::create_sphere(glm::vec3 center, float radius, rt_materia
 	return sphere;
 }
 
-rt_plane SceneManager::create_plane(vec3 normal, vec3 pos, rt_material material)
+rt_plane SceneManager::create_plane(glm::vec3 normal, glm::vec3 pos, rt_material material)
 {
     rt_plane plane = {};
     plane.normal = normal;
@@ -170,7 +169,7 @@ rt_plane SceneManager::create_plane(vec3 normal, vec3 pos, rt_material material)
     return plane;
 }
 
-rt_box SceneManager::create_box(vec3 pos, vec3 form, rt_material material)
+rt_box SceneManager::create_box(glm::vec3 pos, glm::vec3 form, rt_material material)
 {
 	rt_box box = {};
 	box.form = form;
@@ -179,7 +178,7 @@ rt_box SceneManager::create_box(vec3 pos, vec3 form, rt_material material)
     return box;
 }
 
-rt_torus SceneManager::create_torus(vec3 pos, vec2 form, rt_material material)
+rt_torus SceneManager::create_torus(glm::vec3 pos, glm::vec2 form, rt_material material)
 {
 	rt_torus torus = {};
 	torus.form = form;
@@ -188,7 +187,7 @@ rt_torus SceneManager::create_torus(vec3 pos, vec2 form, rt_material material)
     return torus;
 }
 
-rt_ring SceneManager::create_ring(vec3 pos, float r1, float r2, rt_material material)
+rt_ring SceneManager::create_ring(glm::vec3 pos, float r1, float r2, rt_material material)
 {
 	rt_ring ring = {};
 	ring.pos = pos;
@@ -198,7 +197,7 @@ rt_ring SceneManager::create_ring(vec3 pos, float r1, float r2, rt_material mate
     return ring;
 }
 
-rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float intensity, float linear_k,
+rt_light_point SceneManager::create_light_point(glm::vec4 position, glm::vec3 color, float intensity, float linear_k,
 	float quadratic_k)
 {
 	rt_light_point light = {};
@@ -212,7 +211,7 @@ rt_light_point SceneManager::create_light_point(vec4 position, vec3 color, float
 	return light;
 }
 
-rt_light_direct SceneManager::create_light_direct(vec3 direction, vec3 color, float intensity)
+rt_light_direct SceneManager::create_light_direct(glm::vec3 direction, glm::vec3 color, float intensity)
 {
 	rt_light_direct light = {};
 
@@ -291,7 +290,7 @@ void SceneManager::updateBuffers() const
 	updateBuffer(lightPointUbo, scene->lights_point);
 }
 
-vec3 SceneManager::getColor(float r, float g, float b)
+glm::vec3 SceneManager::getColor(float r, float g, float b)
 {
-	return vec3{ r / 255, g / 255, b / 255 };
+	return glm::vec3(r / 255, g / 255, b / 255);
 }

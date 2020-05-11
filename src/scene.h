@@ -1,8 +1,6 @@
 #pragma once
 
-#include "primitives.h"
 #include <vector>
-#include "quaternion.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #define PI_F 3.14159265358979f
@@ -18,14 +16,14 @@ struct rt_defines
 	int light_point_size;
 	int light_direct_size;
 	int iterations;
-	vec3 ambient_color;
-	vec3 shadow_ambient;
+	glm::vec3 ambient_color;
+	glm::vec3 shadow_ambient;
 };
 
 typedef struct {
-	vec3 color; float __p1;
+	glm::vec3 color; float __p1;
 
-	vec3 absorb;
+	glm::vec3 absorb;
 	float diffuse;
 
 	float reflect;
@@ -48,35 +46,35 @@ typedef struct {
 
 typedef struct {
 	rt_material material;
-    vec3 pos; float __p1;
-	vec3 normal; float __p2;
+	glm::vec3 pos; float __p1;
+	glm::vec3 normal; float __p2;
 } rt_plane;
 
 typedef struct {
 	rt_material mat;
 	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
-	vec3 pos; float __p1;
-	vec3 form; float __p2;
+	glm::vec3 pos; float __p1;
+	glm::vec3 form; float __p2;
 } rt_box;
 
 typedef struct {
 	rt_material mat;
-	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
-	vec3 pos; float __p1;
-	vec2 form; float __p2[2];
+	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
+	glm::vec3 pos; float __p1;
+	glm::vec2 form; float __p2[2];
 } rt_torus;
 
 typedef struct {
 	rt_material mat;
 	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
-	vec3 pos; int textureNum;
+	glm::vec3 pos; int textureNum;
 	float r1, r2;
 	float __p2[2];
 } rt_ring;
 
 typedef struct {
 	rt_material mat;
-	vec4 quat_rotation = Quaternion<float>::Identity().GetStruct();
+	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
 	float xMin = -FLT_MAX;
 	float yMin = -FLT_MAX;
 	float zMin = -FLT_MAX;
@@ -85,7 +83,7 @@ typedef struct {
 	float yMax = FLT_MAX;
 	float zMax = FLT_MAX;
 	float __p1;
-	vec3 pos;
+	glm::vec3 pos;
 	float a; // x2
 	float b; // y2
 	float c; // z2
@@ -99,15 +97,15 @@ typedef struct {
 typedef enum { sphere, light } primitiveType;
 
 struct rt_light_direct {
-	vec3 direction; float __p1;
-	vec3 color;
+	glm::vec3 direction; float __p1;
+	glm::vec3 color;
 
 	float intensity;
 };
 
 struct rt_light_point {
-	vec4 pos; //pos + radius
-	vec3 color;
+	glm::vec4 pos; //pos + radius
+	glm::vec3 color;
 	float intensity;
 	
 	float linear_k;
@@ -119,7 +117,7 @@ typedef struct {
     glm::quat quat_camera_rotation;
 	glm::vec3 camera_pos; float __p1;
 
-	vec3 bg_color;
+    glm::vec3 bg_color;
 	int canvas_width;
 
 	int canvas_height;
@@ -130,8 +128,8 @@ typedef struct {
 struct scene_container
 {
 	rt_scene scene;
-	vec3 ambient_color;
-	vec3 shadow_ambient;
+	glm::vec3 ambient_color;
+	glm::vec3 shadow_ambient;
 	std::vector<rt_sphere> spheres;
 	std::vector<rt_plane> planes;
 	std::vector<rt_surface> surfaces;
