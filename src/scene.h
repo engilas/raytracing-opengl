@@ -54,7 +54,8 @@ typedef struct {
 	rt_material mat;
 	glm::quat quat_rotation = glm::quat(1, 0, 0, 0);
 	glm::vec3 pos; float __p1;
-	glm::vec3 form; float __p2;
+	glm::vec3 form;
+	int textureNum;
 } rt_box;
 
 typedef struct {

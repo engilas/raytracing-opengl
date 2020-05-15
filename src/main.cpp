@@ -5,19 +5,19 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
+#include <stb_image.h>
 
 static int wind_width = 660;
 static int wind_height = 960;
 
 /*
  * todo
- * box textures
  * refactoring (proj structure, formatting)
  * AA
  */
 
 void updateScene(scene_container& scene, float delta, float time);
-GLuint loadTexture(int num, const char* name, GLWrapper& glWrapper, GLuint wrapMode = GL_REPEAT);
+GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLWrapper& glWrapper, GLuint wrapMode = GL_REPEAT);
 
 namespace update {
 	int jupiter = -1,
@@ -37,6 +37,7 @@ int main()
 	scene_container scene = {};
 
 	glWrapper.init_window();
+	glfwSwapInterval(1);
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();
 
@@ -67,7 +68,7 @@ int main()
 	const int saturnRadius = 4150;
 	rt_sphere saturn = SceneManager::create_sphere({}, saturnRadius,
 		SceneManager::create_material({}, 0, 0.0f));
-	saturn.textureNum = 4;
+	saturn.textureNum = 2;
 	saturn.quat_rotation = saturnPitch;
 	scene.spheres.push_back(saturn);
 	update::saturn = scene.spheres.size() - 1;
@@ -75,7 +76,7 @@ int main()
 	// mars
 	rt_sphere mars = SceneManager::create_sphere({}, 500,
 		SceneManager::create_material({}, 0, 0.0f));
-	mars.textureNum = 2;
+	mars.textureNum = 3;
 	scene.spheres.push_back(mars);
 	update::mars = scene.spheres.size() - 1;
 
@@ -83,7 +84,7 @@ int main()
 	{
 		rt_ring ring = SceneManager::create_ring({}, saturnRadius * 1.1166, saturnRadius * 2.35,
 			SceneManager::create_material({}, 0, 0));
-		ring.textureNum = 3;
+		ring.textureNum = 4;
 		ring.quat_rotation = glm::angleAxis(glm::radians(90.f), glm::vec3(1, 0, 0)) * saturnPitch;
 		scene.rings.push_back(ring);
 		update::saturn_rings = scene.rings.size() - 1;
@@ -93,8 +94,10 @@ int main()
 	scene.boxes.push_back(SceneManager::create_box({ 0, -1.2, 6 }, { 10, 0.2, 5 },
 		SceneManager::create_material({ 1, 0.6, 0 }, 100, 0.05)));
 	// box
-	scene.boxes.push_back(SceneManager::create_box({ 8, 1, 6 }, { 1, 1, 1 },
-		SceneManager::create_material({ 0.8,0.7,0 }, 50, 0.1)));
+	rt_box box = SceneManager::create_box({ 8, 1, 6 }, { 1, 1, 1 },
+		SceneManager::create_material({ 0.8,0.7,0 }, 50, 0.0));
+	box.textureNum = 5;
+	scene.boxes.push_back(box);
 	update::box = scene.boxes.size() - 1;
 
 	// *** beware! torus calculations is the most heavy part of rendering
@@ -138,15 +141,14 @@ int main()
 
 	glWrapper.setSkybox(GLWrapper::loadCubemap(faces, false));
 
-	auto jupiterTex = loadTexture(1, "8k_jupiter.jpg", glWrapper);
-	auto marsTex = loadTexture(2, "2k_mars.jpg", glWrapper);
-	auto ringTex = loadTexture(3, "8k_saturn_ring_alpha.png", glWrapper);
-	auto saturnTex = loadTexture(4, "8k_saturn.jpg", glWrapper);
+	auto jupiterTex = loadTexture(1, "8k_jupiter.jpg", "texture_sphere_1", glWrapper);
+	auto saturnTex = loadTexture(2, "8k_saturn.jpg", "texture_sphere_2", glWrapper);
+	auto marsTex = loadTexture(3, "2k_mars.jpg", "texture_sphere_3", glWrapper);
+	auto ringTex = loadTexture(4, "8k_saturn_ring_alpha.png", "texture_ring", glWrapper);
+	auto boxTex = loadTexture(5, "container.png", "texture_box", glWrapper);
 
 	SceneManager scene_manager(wind_width, wind_height, &scene, &glWrapper);
 	scene_manager.init();
-
-	glfwSwapInterval(1);
 
 	auto start = std::chrono::steady_clock::now();
 	auto currentTime = std::chrono::steady_clock::now();
@@ -155,16 +157,17 @@ int main()
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D, jupiterTex);
 	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, marsTex);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, ringTex);
-	glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D, saturnTex);
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D, marsTex);
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D, ringTex);
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D, boxTex);
 
 	while (!glfwWindowShouldClose(glWrapper.window))
 	{
-
-		++frames_count;
+		frames_count++;
 		auto newTime = std::chrono::steady_clock::now();
 		std::chrono::duration<float> elapsed = (newTime - start);
 		std::chrono::duration<float> frameTime = (newTime - currentTime);
@@ -181,12 +184,17 @@ int main()
 	return 0;
 }
 
-GLuint loadTexture(int num, const char* name, GLWrapper& glWrapper, GLuint wrapMode)
+GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLWrapper& glWrapper, GLuint wrapMode)
 {
 	const std::string path = "../assets/textures/" + std::string(name);
-	const std::string uniformName = "texture" + std::to_string(num);
 	const unsigned int tex = GLWrapper::loadTexture(path.c_str(), wrapMode);
-	glUniform1i(glGetUniformLocation(glWrapper.renderHandle, uniformName.c_str()), num);
+	int location = glGetUniformLocation(glWrapper.renderHandle, uniformName);
+	if (location == -1)
+	{
+		fprintf(stderr, "Invalid uniform name '%s'", uniformName);
+		exit(1);
+	}
+	glUniform1i(location, texNum);
 	return tex;
 }
 

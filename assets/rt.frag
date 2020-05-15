@@ -1,4 +1,5 @@
 #version 430
+#extension GL_ARB_bindless_texture : require
 
 #define FLT_MIN 1.175494351e-38
 #define FLT_MAX 3.402823466e+38
@@ -51,6 +52,7 @@ struct rt_box {
 	vec4 quat_rotation;
 	vec3 pos;
 	vec3 form;
+	int textureNum;
 };
 
 struct rt_ring {
@@ -133,10 +135,12 @@ out vec4 FragColor;
 
 uniform samplerCube skybox;
 
-uniform sampler2D texture1;
-uniform sampler2D texture2;
-uniform sampler2D texture3;
-uniform sampler2D texture4;
+uniform sampler2D texture_sphere_1;
+uniform sampler2D texture_sphere_2;
+uniform sampler2D texture_sphere_3;
+uniform sampler2D texture_sphere_4;
+uniform sampler2D texture_ring;
+uniform sampler2D texture_box;
 
 layout( std140, binding=0 ) uniform scene_buf
 {
@@ -295,21 +299,6 @@ vec3 getRayDir(vec2 pixel_coords)
 	return normalize(rotate(scene.quat_camera_rotation, result));
 }
 
-sampler2D getTexture(int num) {
-	if (num == 1) {
-		return texture1;
-	}
-	if (num == 2) {
-		return texture2;
-	}
-	if (num == 3) {
-		return texture3;
-	}
-	if (num == 4) {
-		return texture4;
-	}
-}
-
 vec4 getSphereTexture(vec3 sphereNormal, vec4 quat, int texNum) {
 	if (quat != vec4(0,0,0,1)) {
 		sphereNormal = rotate(quat, sphereNormal);
@@ -320,8 +309,18 @@ vec4 getSphereTexture(vec3 sphereNormal, vec4 quat, int texNum) {
 	vec2 df = fwidth(uv);
 	if(df.x > 0.5) df.x = 0.;
 
-	vec4 color = textureLod(getTexture(texNum), uv, log2(max(df.x, df.y)*1024.));
-	return color;
+	sampler2D tex;
+	if (texNum == 1) {
+		tex = texture_sphere_1;
+	}
+	if (texNum == 2) {
+		tex = texture_sphere_2;
+	}
+	if (texNum == 3) {
+		tex = texture_sphere_3;
+	}
+
+	return textureLod(tex, uv, log2(max(df.x, df.y)*1024.));
 }
 
 bool intersectSphere(vec3 ro, vec3 rd, vec4 object, bool hollow, float tmin, out float t)
@@ -382,7 +381,7 @@ vec3 getRingNormal(int num) {
 	return rotate(quat_inv(ring.quat_rotation), vec3(0, 0, -1));
 }
 vec4 getRingTexture(int num, vec2 uv) {
-	return texture(getTexture(num), uv);
+	return texture(texture_ring, uv);
 }
 
 bool intersectBox(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec3 normal) 
@@ -413,6 +412,15 @@ bool intersectBox(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec3 n
 	// convert to ray space
 	normal = rotate(quat_inv(box.quat_rotation), nor);
 	return true;
+}
+vec4 getBoxTexture(vec3 pt, vec3 normal, int num) {
+	rt_box box = boxes[num];
+	vec3 pos = rotate(box.quat_rotation, box.pos);
+	pt = rotate(box.quat_rotation, pt);
+	normal = rotate(box.quat_rotation, normal);
+	return abs(normal.x)*texture(texture_box, 0.5*(pt.zy - pos.zy)-vec2(0.5)) + 
+			abs(normal.y)*texture(texture_box, 0.5*(pt.zx - pos.zx)-vec2(0.5)) + 
+			abs(normal.z)*texture(texture_box, 0.5*(pt.xy - pos.xy)-vec2(0.5));
 }
 
 // begin torus section
@@ -741,7 +749,13 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float t, int num, int type, v
 		hr = hit_record(surfaces[num].mat, getSurfaceNormal(ro, rd, t, num), 0, 1);
 	}
 	if (type == TYPE_BOX) {
-		hr = hit_record(boxes[num].mat, opt_normal, 0, 1);
+		rt_box box = boxes[num];
+		hr = hit_record(box.mat, opt_normal, 0, 1);
+		if (box.textureNum != 0) {
+			vec4 texColor = getBoxTexture(pt, opt_normal, num);
+			hr.mat.color = texColor.rgb;
+			hr.alpha = texColor.a;
+		}
 	}
 	if (type == TYPE_TORUS) {
 		hr = hit_record(toruses[num].mat, getTorusNormal(ro, rd, t, num), 0, 1);
