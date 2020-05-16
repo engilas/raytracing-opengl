@@ -7,13 +7,11 @@
 #include "Surface.h"
 #include "shader.h"
 
-static int wind_width = 660;
-static int wind_height = 960;
+static int wind_width = 1200;
+static int wind_height = 800;
 
 /*
  * todo
- * refactoring (proj structure, formatting)
- * x64
  * update readme, screenshots
  * AA
  */
@@ -34,12 +32,14 @@ const glm::quat saturnPitch = glm::quat(glm::vec3(glm::radians(15.f), 0, 0));
 
 int main()
 {
-	GLWrapper glWrapper(false);
+	GLWrapper glWrapper(wind_width, wind_height, false);
+	// for fullscreen
+	// GLWrapper glWrapper(true);
 
 	scene_container scene = {};
 
 	glWrapper.init_window();
-	glfwSwapInterval(1);
+	glfwSwapInterval(1); // vsync
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();
 
@@ -103,7 +103,7 @@ int main()
 	update::box = scene.boxes.size() - 1;
 
 	// *** beware! torus calculations is the most heavy part of rendering
-	// *** remove next line if you have performance issues
+	// *** comment next line if you have performance issues
 	// torus
 	rt_torus torus = SceneManager::create_torus({ -9, 0.5, 6 }, { 1.0, 0.5 },
 		SceneManager::create_material({ 0.5, 0.4, 1 }, 200, 0.2));
