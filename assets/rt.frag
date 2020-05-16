@@ -325,20 +325,16 @@ vec4 getSphereTexture(vec3 sphereNormal, vec4 quat, int texNum) {
 
 bool intersectSphere(vec3 ro, vec3 rd, vec4 object, bool hollow, float tmin, out float t)
 {
-    bool r = false;
-	vec3 v = ro - object.xyz; // pos
-	float b = dot(v, rd);
-	float c = dot(v, v) - object.w * object.w;
-	t = b * b - c;
-    if(t > 0.0)
-    {
-		float sqrt_ = sqrt(t);
-		t = -b - sqrt_;
-		if (hollow && t < 0.0) 
-			t = - b + sqrt_;
-		r = (t > 0.0) && (t < tmin);
-    } 
-    return r;
+    vec3 oc = ro - object.xyz;
+	float b = dot( oc, rd );
+	float c = dot( oc, oc ) - object.w*object.w;
+	float h = b*b - c;
+	if( h<0.0 ) return false;
+	float h_sqrt = sqrt(h);
+	t = -b - h_sqrt;
+	if (hollow && t < 0.0) 
+		t = -b + h_sqrt;
+	return t > 0 && t < tmin;
 }
 
 bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tmin, out float t) {

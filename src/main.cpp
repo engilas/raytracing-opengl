@@ -13,6 +13,8 @@ static int wind_height = 960;
 /*
  * todo
  * refactoring (proj structure, formatting)
+ * x64
+ * update readme, screenshots
  * AA
  */
 
