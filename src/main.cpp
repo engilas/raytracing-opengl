@@ -54,9 +54,12 @@ int main()
 
 	// blue sphere
 	scene.spheres.push_back(SceneManager::create_sphere({ 2, 0, 6 }, 1,
-		SceneManager::create_material({ 0, 0, 1 }, 50, 0.3)));
-	// transparent sphere
+		SceneManager::create_material({ 0, 0, 1 }, 50, 0.35)));
+	// red sphere
 	scene.spheres.push_back(SceneManager::create_sphere({ -1, 0, 6 }, 1,
+		SceneManager::create_material({ 1, 0, 0 }, 100, 0.1), true));
+	// transparent sphere
+	scene.spheres.push_back(SceneManager::create_sphere({ 0.5, 2, 6 }, 1,
 		SceneManager::create_material({ 1, 1, 1 }, 200, 0.1, 1.125, { 1, 0, 2 }, 1), true));
 
 	// jupiter
