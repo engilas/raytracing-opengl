@@ -16,14 +16,14 @@ public:
 
 	Shader()
 	{
-		
+
 	}
 
 	Shader(const char* vertexPath, const char* fragmentPath)
 	{
 		initFromFile(vertexPath, fragmentPath);
 	}
-	
+
 	~Shader() {
 		glDeleteProgram(ID);
 	}

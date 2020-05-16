@@ -6,7 +6,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
-class SceneManager 
+class SceneManager
 {
 public:
 	SceneManager(int wind_width, int wind_height, scene_container* scene, GLWrapper* wrapper);
@@ -42,7 +42,7 @@ private:
 
 	float lastX = 0;
 	float lastY = 0;
-	
+
 	// Camera Attributes
 	glm::vec3 position;
 	glm::vec3 front;
@@ -54,26 +54,26 @@ private:
 
 	GLuint sceneUbo = 0;
 	GLuint sphereUbo = 0;
-    GLuint planeUbo = 0;
-    GLuint surfaceUbo = 0;
-    GLuint boxUbo = 0;
-    GLuint torusUbo = 0;
-    GLuint ringUbo = 0;
+	GLuint planeUbo = 0;
+	GLuint surfaceUbo = 0;
+	GLuint boxUbo = 0;
+	GLuint torusUbo = 0;
+	GLuint ringUbo = 0;
 	GLuint lightPointUbo = 0;
 	GLuint lightDirectUbo = 0;
 
 	void multiplyVector(float v[3], float s);
 	void addVector(glm::vec3& v1, const float v2[3]);
-	void moveCamera(glm::quat& q, const float direction[3], glm::vec3 & vector, float speed);
-	void moveCamera(const float direction[3], glm::vec3 & vector, float speed);
+	void moveCamera(glm::quat& q, const float direction[3], glm::vec3& vector, float speed);
+	void moveCamera(const float direction[3], glm::vec3& vector, float speed);
 	void UpdateScene(float frameRate);
-	void glfw_key_callback(GLFWwindow * window, int key, int scancode, int action, int mods);
+	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
-	void glfw_mouse_callback(GLFWwindow * window, double xpos, double ypos);
+	void glfw_mouse_callback(GLFWwindow* window, double xpos, double ypos);
 	void initBuffers();
 	void updateBuffers() const;
 	glm::vec3 getColor(float r, float g, float b);
-	
+
 	template<typename T>
 	void initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& data);
 	void initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data);

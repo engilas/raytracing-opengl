@@ -3,7 +3,7 @@
 
 class SurfaceFactory {
 public:
-	
+
 	static rt_surface GetEllipsoid(float a, float b, float c, rt_material material)
 	{
 		rt_surface surface = {};

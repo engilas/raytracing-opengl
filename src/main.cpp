@@ -65,7 +65,7 @@ int main()
 	jupiter.textureNum = 1;
 	scene.spheres.push_back(jupiter);
 	update::jupiter = scene.spheres.size() - 1;
-	
+
 	// saturn
 	const int saturnRadius = 4150;
 	rt_sphere saturn = SceneManager::create_sphere({}, saturnRadius,
@@ -208,27 +208,27 @@ void updateScene(scene_container& scene, float delta, float time)
 		const float jupiterSpeed = 0.02;
 		jupiter->obj.x = cos(time * jupiterSpeed) * 20000;
 		jupiter->obj.z = sin(time * jupiterSpeed) * 20000;
-		
+
 		jupiter->quat_rotation *= glm::angleAxis(delta / 15, glm::vec3(0, 1, 0));
 	}
-	
+
 	if (update::saturn != -1 && update::saturn_rings != -1) {
 		rt_sphere* saturn = &scene.spheres[update::saturn];
 		rt_ring* ring = &scene.rings[update::saturn_rings];
 		const float speed = 0.0082;
 		const float dist = 35000;
 		const float offset = 1;
-		
+
 		saturn->obj.x = cos(time * speed + offset) * dist;
 		saturn->obj.z = sin(time * speed + offset) * dist;
 
 		glm::vec3 axis = glm::vec3(0, 1, 0) * saturnPitch;
 		saturn->quat_rotation *= glm::angleAxis(delta / 10, axis);
-	
+
 		ring->pos.x = cos(time * speed + offset) * dist;
 		ring->pos.z = sin(time * speed + offset) * dist;
 	}
-	
+
 	if (update::mars != -1) {
 		rt_sphere* mars = &scene.spheres[update::mars];
 		const float marsSpeed = 0.05;
@@ -237,14 +237,14 @@ void updateScene(scene_container& scene, float delta, float time)
 		mars->obj.y = -cos(time * marsSpeed) * 3000;
 		mars->quat_rotation *= glm::angleAxis(delta / 5, glm::vec3(0, 1, 0));
 	}
-	
+
 	if (update::box != -1)
 	{
 		rt_box* box = &scene.boxes[update::box];
 		glm::quat q = glm::angleAxis(delta, glm::vec3(0.5774, 0.5774, 0.5774));
 		box->quat_rotation *= q;
 	}
-	
+
 	if (update::torus != -1)
 	{
 		rt_torus* torus = &scene.toruses[update::torus];

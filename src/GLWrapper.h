@@ -28,7 +28,7 @@ public:
 
 	GLFWwindow* window;
 
-    void draw();
+	void draw();
 	static unsigned loadCubemap(std::vector<std::string> faces, bool getMipmap = false);
 	static unsigned loadTexture(char const* path, GLuint wrapMode = GL_REPEAT);
 
@@ -36,19 +36,19 @@ private:
 	Shader shader;
 	GLuint skyboxTex;
 	unsigned int quadVAO, quadVBO;
-	
+
 	int width;
 	int height;
 
 	bool fullScreen = true;
 	bool useCustomResolution = false;
-	
-	static void print_shader_info_log(GLuint shader);
-    static void print_program_info_log(GLuint program);
-    static bool check_shader_errors(GLuint shader);
-    static bool check_program_errors(GLuint program);
 
-    static void checkErrors(std::string desc);
+	static void print_shader_info_log(GLuint shader);
+	static void print_program_info_log(GLuint program);
+	static bool check_shader_errors(GLuint shader);
+	static bool check_program_errors(GLuint program);
+
+	static void checkErrors(std::string desc);
 
 	static std::string to_string(glm::vec3 v);
 };

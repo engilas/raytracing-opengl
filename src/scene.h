@@ -32,7 +32,7 @@ typedef struct {
 	float kd;
 
 	float ks;
-    float __padding[3];
+	float __padding[3];
 } rt_material;
 
 typedef struct {
@@ -91,7 +91,7 @@ typedef struct {
 	float d; // z
 	float e; // y
 	float f; // const
-	
+
 	float __padding[3];
 } rt_surface;
 
@@ -108,17 +108,17 @@ struct rt_light_point {
 	glm::vec4 pos; //pos + radius
 	glm::vec3 color;
 	float intensity;
-	
+
 	float linear_k;
 	float quadratic_k;
 	float __padding[2];
 };
 
 typedef struct {
-    glm::quat quat_camera_rotation;
+	glm::quat quat_camera_rotation;
 	glm::vec3 camera_pos; float __p1;
 
-    glm::vec3 bg_color;
+	glm::vec3 bg_color;
 	int canvas_width;
 
 	int canvas_height;
@@ -142,7 +142,7 @@ struct scene_container
 
 	rt_defines get_defines()
 	{
-		return {static_cast<int>(spheres.size()),
+		return { static_cast<int>(spheres.size()),
 			static_cast<int>(planes.size()),
 			static_cast<int>(surfaces.size()),
 			static_cast<int>(boxes.size()),
@@ -150,6 +150,6 @@ struct scene_container
 			static_cast<int>(rings.size()),
 			static_cast<int>(lights_point.size()),
 			static_cast<int>(lights_direct.size()),
-			scene.reflect_depth, ambient_color, shadow_ambient};
+			scene.reflect_depth, ambient_color, shadow_ambient };
 	}
 };

@@ -55,7 +55,7 @@ void SceneManager::UpdateScene(float frameRate)
 	if (alt_pressed)
 		speed /= 6;
 
-	const glm::vec3 aq = front * speed*1e3f;
+	const glm::vec3 aq = front * speed * 1e3f;
 
 	if (w_pressed)
 		position += front * speed;
@@ -134,20 +134,20 @@ void SceneManager::glfw_mouse_callback(GLFWwindow* window, double xpos, double y
 		pitch = -89.0f;
 }
 
-rt_material SceneManager::create_material(glm::vec3 color, int specular, float reflect, float refract, glm::vec3 absorb , float diffuse, float kd, float ks)
+rt_material SceneManager::create_material(glm::vec3 color, int specular, float reflect, float refract, glm::vec3 absorb, float diffuse, float kd, float ks)
 {
-    rt_material material = {};
+	rt_material material = {};
 
-    material.color = color;
-    material.absorb = absorb;
-    material.specular = specular;
-    material.reflect = reflect;
-    material.refract = refract;
-    material.diffuse = diffuse;
-    material.kd = kd;
-    material.ks = ks;
+	material.color = color;
+	material.absorb = absorb;
+	material.specular = specular;
+	material.reflect = reflect;
+	material.refract = refract;
+	material.diffuse = diffuse;
+	material.kd = kd;
+	material.ks = ks;
 
-    return material;
+	return material;
 }
 
 rt_sphere SceneManager::create_sphere(glm::vec3 center, float radius, rt_material material, bool hollow)
@@ -162,11 +162,11 @@ rt_sphere SceneManager::create_sphere(glm::vec3 center, float radius, rt_materia
 
 rt_plane SceneManager::create_plane(glm::vec3 normal, glm::vec3 pos, rt_material material)
 {
-    rt_plane plane = {};
-    plane.normal = normal;
-    plane.pos = pos;
-    plane.material = material;
-    return plane;
+	rt_plane plane = {};
+	plane.normal = normal;
+	plane.pos = pos;
+	plane.material = material;
+	return plane;
 }
 
 rt_box SceneManager::create_box(glm::vec3 pos, glm::vec3 form, rt_material material)
@@ -175,7 +175,7 @@ rt_box SceneManager::create_box(glm::vec3 pos, glm::vec3 form, rt_material mater
 	box.form = form;
 	box.pos = pos;
 	box.mat = material;
-    return box;
+	return box;
 }
 
 rt_torus SceneManager::create_torus(glm::vec3 pos, glm::vec2 form, rt_material material)
@@ -184,7 +184,7 @@ rt_torus SceneManager::create_torus(glm::vec3 pos, glm::vec2 form, rt_material m
 	torus.form = form;
 	torus.pos = pos;
 	torus.mat = material;
-    return torus;
+	return torus;
 }
 
 rt_ring SceneManager::create_ring(glm::vec3 pos, float r1, float r2, rt_material material)
@@ -194,7 +194,7 @@ rt_ring SceneManager::create_ring(glm::vec3 pos, float r1, float r2, rt_material
 	ring.mat = material;
 	ring.r1 = r1 * r1;
 	ring.r2 = r2 * r2;
-    return ring;
+	return ring;
 }
 
 rt_light_point SceneManager::create_light_point(glm::vec4 position, glm::vec3 color, float intensity, float linear_k,
@@ -252,7 +252,7 @@ void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, s
 }
 
 template<typename T>
-void SceneManager::initBuffer(GLuint *ubo, const char* name, int bindingPoint, std::vector<T>& data)
+void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& data)
 {
 	initBuffer(ubo, name, bindingPoint, sizeof(T) * data.size(), data.data());
 }
