@@ -160,8 +160,8 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 
 void GLWrapper::init_shaders(rt_defines& defines)
 {
-	const std::string vertexShaderSrc = readFromFile("../assets/rt.vert");
-	std::string fragmentShaderSrc = readFromFile("../assets/rt.frag");
+	const std::string vertexShaderSrc = readFromFile(ASSETS_DIR "/rt.vert");
+	std::string fragmentShaderSrc = readFromFile(ASSETS_DIR "/rt.frag");
 	
 	replace(fragmentShaderSrc, "{SPHERE_SIZE}", std::to_string(defines.sphere_size));
 	replace(fragmentShaderSrc, "{PLANE_SIZE}", std::to_string(defines.plane_size));

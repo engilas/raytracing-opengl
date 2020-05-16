@@ -134,12 +134,12 @@ int main()
 
 	std::vector<std::string> faces =
 	{
-		"../assets/textures/sb_nebula/GalaxyTex_PositiveX.jpg",
-		"../assets/textures/sb_nebula/GalaxyTex_NegativeX.jpg",
-		"../assets/textures/sb_nebula/GalaxyTex_PositiveY.jpg",
-		"../assets/textures/sb_nebula/GalaxyTex_NegativeY.jpg",
-		"../assets/textures/sb_nebula/GalaxyTex_PositiveZ.jpg",
-		"../assets/textures/sb_nebula/GalaxyTex_NegativeZ.jpg"
+		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_PositiveX.jpg",
+		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_NegativeX.jpg",
+		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_PositiveY.jpg",
+		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_NegativeY.jpg",
+		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_PositiveZ.jpg",
+		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_NegativeZ.jpg"
 	};
 
 	glWrapper.setSkybox(GLWrapper::loadCubemap(faces, false));
@@ -189,7 +189,7 @@ int main()
 
 GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLWrapper& glWrapper, GLuint wrapMode)
 {
-	const std::string path = "../assets/textures/" + std::string(name);
+	const std::string path = ASSETS_DIR "/textures/" + std::string(name);
 	const unsigned int tex = GLWrapper::loadTexture(path.c_str(), wrapMode);
 	int location = glGetUniformLocation(glWrapper.getProgramId(), uniformName);
 	if (location == -1)
