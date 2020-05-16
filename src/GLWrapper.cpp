@@ -3,6 +3,7 @@
 #include <fstream>
 #include "scene.h"
 #include <stb_image.h>
+#include "shader.h"
 
 static void glfw_error_callback(int error, const char * desc)
 {
@@ -36,6 +37,11 @@ int GLWrapper::getHeight()
 	return height;
 }
 
+GLuint GLWrapper::getProgramId()
+{
+	return shader.ID;
+}
+
 bool GLWrapper::init_window()
 {
 	if (!glfwInit())
@@ -48,6 +54,9 @@ bool GLWrapper::init_window()
 	glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
 	glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
 	glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	if (!useCustomResolution)
 	{
@@ -72,20 +81,39 @@ bool GLWrapper::init_window()
 	}
 	printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
 
-	return true;
-}
 
-void GLWrapper::init_shaders(rt_defines defines)
-{
-	renderHandle = genRenderProg(defines);
+	float quadVertices[] = {
+		-1.0f, -1.0f, 0.0f, 0.0f,
+		 1.0f, -1.0f, 1.0f, 0.0f,
+		 1.0f,  1.0f, 1.0f, 1.0f,
+
+		-1.0f, -1.0f, 0.0f, 0.0f,
+		 1.0f,  1.0f, 1.0f, 1.0f,
+		-1.0f,  1.0f, 0.0f, 1.0f
+	};
+
+	//
+	// quad VAO
+	glGenVertexArrays(1, &quadVAO);
+	glGenBuffers(1, &quadVBO);
+	glBindVertexArray(quadVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+	glBindVertexArray(0);
+
+	return true;
 }
 
 void GLWrapper::setSkybox(unsigned textureId)
 {
-	skyboxHandle = textureId;
-	glUniform1i(glGetUniformLocation(renderHandle, "skybox"), 0);
+	skyboxTex = textureId;
+	shader.setInt("skybox", 0);
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxHandle);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxTex);
 }
 
 void GLWrapper::stop()
@@ -96,27 +124,30 @@ void GLWrapper::stop()
 
 void GLWrapper::draw()
 {
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
+	shader.use();
+	glBindVertexArray(quadVAO);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
 	checkErrors("Draw screen");
 }
 
-static char* load_file(const char *fname, GLint &fSize)
-{
-	std::ifstream file(fname, std::ios::in | std::ios::binary | std::ios::ate);
-	if (file.is_open())
+static std::string readFromFile(const char* path) {
+	std::string content;
+	std::ifstream file;
+	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+	try
 	{
-		unsigned int size = (unsigned int)file.tellg();
-		fSize = size;
-		char *memblock = new char[size];
-		file.seekg(0, std::ios::beg);
-		file.read(memblock, size);
+		file.open(path);
+		std::stringstream stream;
+		stream << file.rdbuf();
 		file.close();
-		std::cout << "file " << fname << " loaded" << std::endl;
-		return memblock;
+		content = stream.str();
 	}
-
-	std::cout << "Unable to open file " << fname << std::endl;
-	return NULL;
+	catch (std::ifstream::failure& e)
+	{
+		std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+		exit(1);
+	}
+	return content;
 }
 
 bool replace(std::string& str, const std::string& from, const std::string& to) {
@@ -127,83 +158,28 @@ bool replace(std::string& str, const std::string& from, const std::string& to) {
 	return true;
 }
 
-GLuint GLWrapper::genRenderProg(rt_defines& defines)
+void GLWrapper::init_shaders(rt_defines& defines)
 {
-    GLuint progHandle = glCreateProgram();
-	GLuint vp = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fp = glCreateShader(GL_FRAGMENT_SHADER);
+	const std::string vertexShaderSrc = readFromFile("../assets/rt.vert");
+	std::string fragmentShaderSrc = readFromFile("../assets/rt.frag");
+	
+	replace(fragmentShaderSrc, "{SPHERE_SIZE}", std::to_string(defines.sphere_size));
+	replace(fragmentShaderSrc, "{PLANE_SIZE}", std::to_string(defines.plane_size));
+	replace(fragmentShaderSrc, "{SURFACE_SIZE}", std::to_string(defines.surface_size));
+	replace(fragmentShaderSrc, "{BOX_SIZE}", std::to_string(defines.box_size));
+	replace(fragmentShaderSrc, "{TORUS_SIZE}", std::to_string(defines.torus_size));
+	replace(fragmentShaderSrc, "{RING_SIZE}", std::to_string(defines.ring_size));
+	replace(fragmentShaderSrc, "{LIGHT_POINT_SIZE}", std::to_string(defines.light_point_size));
+	replace(fragmentShaderSrc, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
+	replace(fragmentShaderSrc, "{ITERATIONS}", std::to_string(defines.iterations));
+	replace(fragmentShaderSrc, "{AMBIENT_COLOR}", to_string(defines.ambient_color));
+	replace(fragmentShaderSrc, "{SHADOW_AMBIENT}", to_string(defines.shadow_ambient));
 
-	const char *vpSrc[] = {
-		"#version 430\n",
-		"void main()\
-		{\
-			float x = float(((uint(gl_VertexID) + 2u) / 3u) % 2u);\
-			float y = float(((uint(gl_VertexID) + 1u) / 3u) % 2u);\
-			gl_Position = vec4(-1.0f + x * 2.0f, -1.0f + y * 2.0f, 0.0f, 1.0f);\
-		}"
-	};
-
-	GLint source_len;
-	auto fpSrcChar = load_file(ASSETS_DIR "/rt.frag", source_len);
-
-	std::string fpS(fpSrcChar, source_len);
-	replace(fpS, "{SPHERE_SIZE}", std::to_string(defines.sphere_size));
-	replace(fpS, "{PLANE_SIZE}", std::to_string(defines.plane_size));
-	replace(fpS, "{SURFACE_SIZE}", std::to_string(defines.surface_size));
-	replace(fpS, "{BOX_SIZE}", std::to_string(defines.box_size));
-	replace(fpS, "{TORUS_SIZE}", std::to_string(defines.torus_size));
-	replace(fpS, "{RING_SIZE}", std::to_string(defines.ring_size));
-	replace(fpS, "{LIGHT_POINT_SIZE}", std::to_string(defines.light_point_size));
-	replace(fpS, "{LIGHT_DIRECT_SIZE}", std::to_string(defines.light_direct_size));
-	replace(fpS, "{ITERATIONS}", std::to_string(defines.iterations));
-	replace(fpS, "{AMBIENT_COLOR}", to_string(defines.ambient_color));
-	replace(fpS, "{SHADOW_AMBIENT}", to_string(defines.shadow_ambient));
-	//fpS.append('\0');
-	auto tmp = fpS.c_str();
-	source_len = fpS.size();
-
-	glShaderSource(vp, 2, vpSrc, NULL);
-	glShaderSource(fp, 1, &tmp, NULL);
-
-	glCompileShader(vp);
-	int rvalue;
-	glGetShaderiv(vp, GL_COMPILE_STATUS, &rvalue);
-	if (!rvalue) {
-		fprintf(stderr, "Error in compiling vp\n");
-		exit(30);
-	}
-	glAttachShader(progHandle, vp);
-
-	glCompileShader(fp);
-	glGetShaderiv(fp, GL_COMPILE_STATUS, &rvalue);
-	if (!rvalue) {
-		fprintf(stderr, "Error in compiling fp\n");
-		//exit(31);
-		fprintf(stderr, "Error in compiling the fragment shader\n");
-		GLchar log[10240];
-		GLsizei length;
-		glGetShaderInfoLog(fp, 10239, &length, log);
-		fprintf(stderr, "Compiler log:\n%s\n", log);
-		exit(40);
-	}
-	glAttachShader(progHandle, fp);
-
-	glBindFragDataLocation(progHandle, 0, "color");
-	glLinkProgram(progHandle);
-
-	glGetProgramiv(progHandle, GL_LINK_STATUS, &rvalue);
-	if (!rvalue) {
-		fprintf(stderr, "Error in linking sp\n");
-		check_program_errors(progHandle);
-		exit(32);
-	}
-
-	glUseProgram(progHandle);
-
-	delete[] fpSrcChar;
+	shader.initFromSrc(vertexShaderSrc.c_str(), fragmentShaderSrc.c_str());
 
 	checkErrors("Render shaders");
-	return progHandle;
+
+	shader.use();
 }
 
 std::string GLWrapper::to_string(glm::vec3 v)
@@ -313,7 +289,7 @@ unsigned int GLWrapper::loadTexture(char const* path, GLuint wrapMode)
 		glBindTexture(GL_TEXTURE_2D, textureID);
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
-
+		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, wrapMode);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, wrapMode);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

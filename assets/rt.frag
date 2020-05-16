@@ -1,5 +1,4 @@
-#version 430
-#extension GL_ARB_bindless_texture : require
+#version 330 core
 
 #define FLT_MIN 1.175494351e-38
 #define FLT_MAX 3.402823466e+38
@@ -142,12 +141,12 @@ uniform sampler2D texture_sphere_4;
 uniform sampler2D texture_ring;
 uniform sampler2D texture_box;
 
-layout( std140, binding=0 ) uniform scene_buf
+layout( std140 ) uniform scene_buf
 {
     rt_scene scene;
 };
 
-layout( std140, binding=1 ) uniform sphere_buf
+layout( std140 ) uniform spheres_buf
 {
 	#if SPHERE_SIZE != 0
     rt_sphere spheres[SPHERE_SIZE];
@@ -156,7 +155,7 @@ layout( std140, binding=1 ) uniform sphere_buf
 	#endif
 };
 
-layout( std140, binding=2 ) uniform planes_buf
+layout( std140 ) uniform planes_buf
 {
 	#if PLANE_SIZE != 0
     rt_plane planes[PLANE_SIZE];
@@ -165,7 +164,7 @@ layout( std140, binding=2 ) uniform planes_buf
 	#endif
 };
 
-layout( std140, binding=5 ) uniform surfaces_buf
+layout( std140 ) uniform surfaces_buf
 {
 	#if SURFACE_SIZE != 0
     rt_surface surfaces[SURFACE_SIZE];
@@ -174,7 +173,7 @@ layout( std140, binding=5 ) uniform surfaces_buf
 	#endif
 };
 
-layout( std140, binding=6 ) uniform boxes_buf
+layout( std140 ) uniform boxes_buf
 {
 	#if BOX_SIZE != 0
     rt_box boxes[BOX_SIZE];
@@ -183,7 +182,7 @@ layout( std140, binding=6 ) uniform boxes_buf
 	#endif
 };
 
-layout( std140, binding=7 ) uniform toruses_buf
+layout( std140 ) uniform toruses_buf
 {
 	#if TORUS_SIZE != 0
     rt_torus toruses[TORUS_SIZE];
@@ -192,7 +191,7 @@ layout( std140, binding=7 ) uniform toruses_buf
 	#endif
 };
 
-layout( std140, binding=8 ) uniform rings_buf
+layout( std140 ) uniform rings_buf
 {
 	#if RING_SIZE != 0
     rt_ring rings[RING_SIZE];
@@ -201,7 +200,7 @@ layout( std140, binding=8 ) uniform rings_buf
 	#endif
 };
 
-layout( std140, binding=3 ) uniform lights_point_buf
+layout( std140 ) uniform lights_point_buf
 {
 	#if LIGHT_POINT_SIZE != 0
     rt_light_point lights_point[LIGHT_POINT_SIZE];
@@ -210,7 +209,7 @@ layout( std140, binding=3 ) uniform lights_point_buf
 	#endif
 };
 
-layout( std140, binding=4 ) uniform lights_direct_buf
+layout( std140 ) uniform lights_direct_buf
 {
 	#if LIGHT_DIRECT_SIZE != 0
     rt_light_direct lights_direct[LIGHT_DIRECT_SIZE];
@@ -309,18 +308,17 @@ vec4 getSphereTexture(vec3 sphereNormal, vec4 quat, int texNum) {
 	vec2 df = fwidth(uv);
 	if(df.x > 0.5) df.x = 0.;
 
-	sampler2D tex;
+	vec4 color;
 	if (texNum == 1) {
-		tex = texture_sphere_1;
+		color = textureLod(texture_sphere_1, uv, log2(max(df.x, df.y)*1024.));
 	}
 	if (texNum == 2) {
-		tex = texture_sphere_2;
+		color = textureLod(texture_sphere_2, uv, log2(max(df.x, df.y)*1024.));
 	}
 	if (texNum == 3) {
-		tex = texture_sphere_3;
+		color = textureLod(texture_sphere_3, uv, log2(max(df.x, df.y)*1024.));
 	}
-
-	return textureLod(tex, uv, log2(max(df.x, df.y)*1024.));
+	return color;
 }
 
 bool intersectSphere(vec3 ro, vec3 rd, vec4 object, bool hollow, float tmin, out float t)
@@ -748,9 +746,7 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float t, int num, int type, v
 		rt_box box = boxes[num];
 		hr = hit_record(box.mat, opt_normal, 0, 1);
 		if (box.textureNum != 0) {
-			vec4 texColor = getBoxTexture(pt, opt_normal, num);
-			hr.mat.color = texColor.rgb;
-			hr.alpha = texColor.a;
+			hr.mat.color = getBoxTexture(pt, opt_normal, num).rgb;
 		}
 	}
 	if (type == TYPE_TORUS) {

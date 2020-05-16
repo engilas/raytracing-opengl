@@ -5,7 +5,7 @@
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
-#include <stb_image.h>
+#include "shader.h"
 
 static int wind_width = 660;
 static int wind_height = 960;
@@ -129,7 +129,8 @@ int main()
 	cylinder.yMax = 1;
 	scene.surfaces.push_back(cylinder);
 
-	glWrapper.init_shaders(scene.get_defines());
+	rt_defines defines = scene.get_defines();
+	glWrapper.init_shaders(defines);
 
 	std::vector<std::string> faces =
 	{
@@ -190,7 +191,7 @@ GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLWrap
 {
 	const std::string path = "../assets/textures/" + std::string(name);
 	const unsigned int tex = GLWrapper::loadTexture(path.c_str(), wrapMode);
-	int location = glGetUniformLocation(glWrapper.renderHandle, uniformName);
+	int location = glGetUniformLocation(glWrapper.getProgramId(), uniformName);
 	if (location == -1)
 	{
 		fprintf(stderr, "Invalid uniform name '%s'", uniformName);

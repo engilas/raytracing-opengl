@@ -73,4 +73,8 @@ private:
 	void initBuffers();
 	void updateBuffers() const;
 	glm::vec3 getColor(float r, float g, float b);
+	
+	template<typename T>
+	void initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& data);
+	void initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data);
 };

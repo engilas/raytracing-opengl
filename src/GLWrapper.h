@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
+#include "shader.h"
 
 struct rt_defines;
 
@@ -17,9 +18,10 @@ public:
 
 	int getWidth();
 	int getHeight();
+	GLuint getProgramId();
 
 	bool init_window();
-	void init_shaders(rt_defines defines);
+	void init_shaders(rt_defines& defines);
 	void setSkybox(unsigned int textureId);
 
 	void stop();
@@ -30,24 +32,23 @@ public:
 	static unsigned loadCubemap(std::vector<std::string> faces, bool getMipmap = false);
 	static unsigned loadTexture(char const* path, GLuint wrapMode = GL_REPEAT);
 
-	GLuint renderHandle;
-
 private:
-	GLuint skyboxHandle;
+	Shader shader;
+	GLuint skyboxTex;
+	unsigned int quadVAO, quadVBO;
 	
 	int width;
 	int height;
 
 	bool fullScreen = true;
 	bool useCustomResolution = false;
-
-    static void print_shader_info_log(GLuint shader);
+	
+	static void print_shader_info_log(GLuint shader);
     static void print_program_info_log(GLuint program);
     static bool check_shader_errors(GLuint shader);
     static bool check_program_errors(GLuint program);
 
     static void checkErrors(std::string desc);
-	static GLuint genRenderProg(rt_defines& defines);
 
 	static std::string to_string(glm::vec3 v);
 };

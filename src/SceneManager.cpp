@@ -235,32 +235,39 @@ rt_scene SceneManager::create_scene(int width, int height)
 	return scene;
 }
 
-template<typename T>
-void initBuffer(GLuint *ubo, int num, std::vector<T>& data)
+void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data)
 {
 	glGenBuffers(1, ubo);
 	glBindBuffer(GL_UNIFORM_BUFFER, *ubo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(T) * data.size(), data.data(), GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, num, *ubo);
+	glBufferData(GL_UNIFORM_BUFFER, size, data, GL_DYNAMIC_DRAW);
+	GLuint blockIndex = glGetUniformBlockIndex(wrapper->getProgramId(), name);
+	if (blockIndex == 0xffffffff)
+	{
+		fprintf(stderr, "Invalid ubo block name '%s'", name);
+		exit(1);
+	}
+	glUniformBlockBinding(wrapper->getProgramId(), blockIndex, bindingPoint);
+	glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, *ubo);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+template<typename T>
+void SceneManager::initBuffer(GLuint *ubo, const char* name, int bindingPoint, std::vector<T>& data)
+{
+	initBuffer(ubo, name, bindingPoint, sizeof(T) * data.size(), data.data());
 }
 
 void SceneManager::initBuffers()
 {
-	glGenBuffers(1, &sceneUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(rt_scene), NULL, GL_DYNAMIC_DRAW);
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, sceneUbo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-	initBuffer(&sphereUbo, 1, scene->spheres);
-	initBuffer(&planeUbo, 2, scene->planes);
-	initBuffer(&surfaceUbo, 5, scene->surfaces);
-	initBuffer(&boxUbo, 6, scene->boxes);
-	initBuffer(&torusUbo, 7, scene->toruses);
-	initBuffer(&ringUbo, 8, scene->rings);
-	initBuffer(&lightPointUbo, 3, scene->lights_point);
-	initBuffer(&lightDirectUbo, 4, scene->lights_direct);
+	initBuffer(&sceneUbo, "scene_buf", 0, sizeof(rt_scene), nullptr);
+	initBuffer(&sphereUbo, "spheres_buf", 1, scene->spheres);
+	initBuffer(&planeUbo, "planes_buf", 2, scene->planes);
+	initBuffer(&surfaceUbo, "surfaces_buf", 3, scene->surfaces);
+	initBuffer(&boxUbo, "boxes_buf", 4, scene->boxes);
+	initBuffer(&torusUbo, "toruses_buf", 5, scene->toruses);
+	initBuffer(&ringUbo, "rings_buf", 6, scene->rings);
+	initBuffer(&lightPointUbo, "lights_point_buf", 7, scene->lights_point);
+	initBuffer(&lightDirectUbo, "lights_direct_buf", 8, scene->lights_direct);
 }
 
 template<typename T>
