@@ -12,7 +12,6 @@ static int wind_height = 800;
 
 /*
  * todo
- * update readme, screenshots
  * AA
  */
 
