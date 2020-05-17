@@ -92,7 +92,6 @@ bool GLWrapper::init_window()
 		-1.0f,  1.0f, 0.0f, 1.0f
 	};
 
-	//
 	// quad VAO
 	glGenVertexArrays(1, &quadVAO);
 	glGenBuffers(1, &quadVBO);
@@ -304,4 +303,34 @@ unsigned int GLWrapper::loadTexture(char const* path, GLuint wrapMode)
 	}
 
 	return textureID;
+}
+
+GLuint GLWrapper::loadTexture(int texNum, const char* name, const char* uniformName, GLuint wrapMode) const
+{
+	const std::string path = ASSETS_DIR "/textures/" + std::string(name);
+	const unsigned int tex = loadTexture(path.c_str(), wrapMode);
+	shader.setInt(uniformName, texNum);
+	return tex;
+}
+
+void GLWrapper::initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data) const
+{
+	glGenBuffers(1, ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, *ubo);
+	glBufferData(GL_UNIFORM_BUFFER, size, data, GL_DYNAMIC_DRAW);
+	GLuint blockIndex = glGetUniformBlockIndex(shader.ID, name);
+	if (blockIndex == 0xffffffff)
+	{
+		fprintf(stderr, "Invalid ubo block name '%s'", name);
+		exit(1);
+	}
+	glUniformBlockBinding(shader.ID, blockIndex, bindingPoint);
+	glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, *ubo);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+}
+
+void GLWrapper::updateBuffer(GLuint ubo, size_t size, void* data)
+{
+	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, size, data);
 }

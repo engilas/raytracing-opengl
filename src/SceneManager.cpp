@@ -235,31 +235,15 @@ rt_scene SceneManager::create_scene(int width, int height)
 	return scene;
 }
 
-void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data)
-{
-	glGenBuffers(1, ubo);
-	glBindBuffer(GL_UNIFORM_BUFFER, *ubo);
-	glBufferData(GL_UNIFORM_BUFFER, size, data, GL_DYNAMIC_DRAW);
-	GLuint blockIndex = glGetUniformBlockIndex(wrapper->getProgramId(), name);
-	if (blockIndex == 0xffffffff)
-	{
-		fprintf(stderr, "Invalid ubo block name '%s'", name);
-		exit(1);
-	}
-	glUniformBlockBinding(wrapper->getProgramId(), blockIndex, bindingPoint);
-	glBindBufferBase(GL_UNIFORM_BUFFER, bindingPoint, *ubo);
-	glBindBuffer(GL_UNIFORM_BUFFER, 0);
-}
-
 template<typename T>
-void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& data)
+void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& v)
 {
-	initBuffer(ubo, name, bindingPoint, sizeof(T) * data.size(), data.data());
+	wrapper->initBuffer(ubo, name, bindingPoint, sizeof(T) * v.size(), v.data());
 }
 
 void SceneManager::initBuffers()
 {
-	initBuffer(&sceneUbo, "scene_buf", 0, sizeof(rt_scene), nullptr);
+	wrapper->initBuffer(&sceneUbo, "scene_buf", 0, sizeof(rt_scene), nullptr);
 	initBuffer(&sphereUbo, "spheres_buf", 1, scene->spheres);
 	initBuffer(&planeUbo, "planes_buf", 2, scene->planes);
 	initBuffer(&surfaceUbo, "surfaces_buf", 3, scene->surfaces);
@@ -271,14 +255,11 @@ void SceneManager::initBuffers()
 }
 
 template<typename T>
-void updateBuffer(GLuint ubo, std::vector<T>& data)
+void SceneManager::updateBuffer(GLuint ubo, std::vector<T>& v) const
 {
-	if (!data.empty())
+	if (!v.empty())
 	{
-		glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-		GLvoid* p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-		memcpy(p, data.data(), sizeof(T) * data.size());
-		glUnmapBuffer(GL_UNIFORM_BUFFER);
+		wrapper->updateBuffer(ubo, sizeof(T) * v.size(), v.data());
 	}
 }
 

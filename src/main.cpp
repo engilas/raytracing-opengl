@@ -16,7 +16,6 @@ static int wind_height = 800;
  */
 
 void updateScene(scene_container& scene, float delta, float time);
-GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLWrapper& glWrapper, GLuint wrapMode = GL_REPEAT);
 
 namespace update {
 	int jupiter = -1,
@@ -148,11 +147,11 @@ int main()
 
 	glWrapper.setSkybox(GLWrapper::loadCubemap(faces, false));
 
-	auto jupiterTex = loadTexture(1, "8k_jupiter.jpg", "texture_sphere_1", glWrapper);
-	auto saturnTex = loadTexture(2, "8k_saturn.jpg", "texture_sphere_2", glWrapper);
-	auto marsTex = loadTexture(3, "2k_mars.jpg", "texture_sphere_3", glWrapper);
-	auto ringTex = loadTexture(4, "8k_saturn_ring_alpha.png", "texture_ring", glWrapper);
-	auto boxTex = loadTexture(5, "container.png", "texture_box", glWrapper);
+	auto jupiterTex = glWrapper.loadTexture(1, "8k_jupiter.jpg", "texture_sphere_1");
+	auto saturnTex = glWrapper.loadTexture(2, "8k_saturn.jpg", "texture_sphere_2");
+	auto marsTex = glWrapper.loadTexture(3, "2k_mars.jpg", "texture_sphere_3");
+	auto ringTex = glWrapper.loadTexture(4, "8k_saturn_ring_alpha.png", "texture_ring");
+	auto boxTex = glWrapper.loadTexture(5, "container.png", "texture_box");
 
 	SceneManager scene_manager(wind_width, wind_height, &scene, &glWrapper);
 	scene_manager.init();
@@ -189,20 +188,6 @@ int main()
 
 	glWrapper.stop(); // stop glfw, close window
 	return 0;
-}
-
-GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLWrapper& glWrapper, GLuint wrapMode)
-{
-	const std::string path = ASSETS_DIR "/textures/" + std::string(name);
-	const unsigned int tex = GLWrapper::loadTexture(path.c_str(), wrapMode);
-	int location = glGetUniformLocation(glWrapper.getProgramId(), uniformName);
-	if (location == -1)
-	{
-		fprintf(stderr, "Invalid uniform name '%s'", uniformName);
-		exit(1);
-	}
-	glUniform1i(location, texNum);
-	return tex;
 }
 
 void updateScene(scene_container& scene, float delta, float time)
