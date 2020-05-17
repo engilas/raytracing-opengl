@@ -186,44 +186,6 @@ std::string GLWrapper::to_string(glm::vec3 v)
 	return std::string().append("vec3(").append(std::to_string(v.x)).append(",").append(std::to_string(v.y)).append(",").append(std::to_string(v.z)).append(")");
 }
 
-void GLWrapper::print_shader_info_log(GLuint shader) {
-	int max_length = 4096;
-	int actual_length = 0;
-	char slog[4096];
-	glGetShaderInfoLog(shader, max_length, &actual_length, slog);
-	fprintf(stderr, "shader info log for GL index %u\n%s\n", shader, slog);
-}
-
-void GLWrapper::print_program_info_log(GLuint program) {
-	int max_length = 4096;
-	int actual_length = 0;
-	char plog[4096];
-	glGetProgramInfoLog(program, max_length, &actual_length, plog);
-	fprintf(stderr, "program info log for GL index %u\n%s\n", program, plog);
-}
-
-bool GLWrapper::check_shader_errors(GLuint shader) {
-	GLint params = -1;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &params);
-	if (GL_TRUE != params) {
-		fprintf(stderr, "ERROR: shader %u did not compile\n", shader);
-		print_shader_info_log(shader);
-		return false;
-	}
-	return true;
-}
-
-bool GLWrapper::check_program_errors(GLuint program) {
-	GLint params = -1;
-	glGetProgramiv(program, GL_LINK_STATUS, &params);
-	if (GL_TRUE != params) {
-		fprintf(stderr, "ERROR: program %u did not link\n", program);
-		print_program_info_log(program);
-		return false;
-	}
-	return true;
-}
-
 void GLWrapper::checkErrors(std::string desc)
 {
     GLenum e = glGetError();

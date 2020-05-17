@@ -46,11 +46,6 @@ private:
 	bool useCustomResolution = false;
 
 	static GLuint loadTexture(char const* path, GLuint wrapMode = GL_REPEAT);
-	
-	static void print_shader_info_log(GLuint shader);
-	static void print_program_info_log(GLuint program);
-	static bool check_shader_errors(GLuint shader);
-	static bool check_program_errors(GLuint program);
 
 	static void checkErrors(std::string desc);
 
