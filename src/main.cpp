@@ -33,8 +33,10 @@ const glm::quat saturnPitch = glm::quat(glm::vec3(glm::radians(15.f), 0, 0));
 int main()
 {
 	GLWrapper glWrapper(wind_width, wind_height, false);
-	// for fullscreen
+	// fullscreen
 	// GLWrapper glWrapper(true);
+	// window with monitor resolution
+	// GLWrapper glWrapper(false);
 
 	scene_container scene = {};
 
