@@ -19,6 +19,7 @@ Contains following geometric primititives:
   - Elliptic paraboloid
   - Hyperbolic paraboloid
   - Elliptic hyperboloid
+  
 Also:  
 - Texturing for sphere, box, ring
 - Cubemaps
