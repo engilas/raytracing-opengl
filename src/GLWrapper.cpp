@@ -333,4 +333,5 @@ void GLWrapper::updateBuffer(GLuint ubo, size_t size, void* data)
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, size, data);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }

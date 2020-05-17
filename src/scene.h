@@ -3,7 +3,6 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
-#define PI_F 3.14159265358979f
 
 struct rt_defines
 {
