@@ -29,7 +29,7 @@ public:
 	GLFWwindow* window;
 
 	void draw();
-	static GLuint loadCubemap(std::vector<std::string> faces, bool getMipmap = false);
+	static GLuint loadCubemap(std::vector<std::string> faces, bool genMipmap = false);
 	GLuint loadTexture(int texNum, const char* name, const char* uniformName, GLuint wrapMode = GL_REPEAT) const;
 	void initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data) const;
 	static void updateBuffer(GLuint ubo, size_t size, void* data);

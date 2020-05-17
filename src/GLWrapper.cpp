@@ -195,7 +195,7 @@ void GLWrapper::checkErrors(std::string desc)
 	}
 }
 
-unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool getMipmap)
+unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool genMipmap)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -218,10 +218,10 @@ unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool getMipm
 			stbi_image_free(data);
 		}
 	}
-	if (getMipmap) {
+	if (genMipmap) {
 		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 	}
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, getMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, genMipmap ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
