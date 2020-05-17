@@ -1,8 +1,29 @@
-### Realtime RayTracing OpenGL
+### Realtime raytracing
 
 Implemented with OpenGL fragment shaders.
 
 Scene setup in main.cpp source file.
+
+#### Features
+
+Contains following geometric primititives:
+- Sphere
+- Box
+- Ring
+- Plane
+- Torus
+- Quadric surfaces:
+  - Ellipsoid
+  - Cone
+  - Cylinder
+  - Elliptic paraboloid
+  - Hyperbolic paraboloid
+  - Elliptic hyperboloid
+Also:  
+- Texturing for sphere, box, ring
+- Cubemaps
+- Rotations with quaternions
+
 
 #### Controls:
 
@@ -17,20 +38,25 @@ Movement:
 - Alt (hold) - slowdown
 
 #### Build
-For windows: only x86, but you can replace glwf binaries (common/glfw) to x64 if you want to build for x64
 ```sh
 mkdir bin
 cd bin
-cmake -A Win32 ..
-cmake --build . --config Release
+cmake ..
+cmake --build .
 ```
+##### For windows:
+GLFW binaries included (common/GLFW), glfw3.lib compiled for Visual Studio 2019
+You can use binaries for other VS versions from GLFW/win-x64, or compile by yourself.
+
 
 #### Requirements
 
 * CMake (>= 3.0.2)
-* GPU with OpenGL (>= 3.1) support
-* GLFW, should be automatically found by CMake.
+* GPU with OpenGL (>= 3.3) support
+* GLM (included)
+* GLFW, should be automatically found by CMake (win64 binaries included)
 
 #### Screenshots
 
+![](media/v2.png)
 ![](media/animation.gif)
