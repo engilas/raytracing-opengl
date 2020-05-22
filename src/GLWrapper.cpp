@@ -1,6 +1,5 @@
 #include "GLWrapper.h"
 #include <iostream>
-#include <fstream>
 #include "scene.h"
 #include <stb_image.h>
 #include "shader.h"
@@ -25,6 +24,23 @@ GLWrapper::GLWrapper(bool fullScreen)
 
 GLWrapper::~GLWrapper()
 {
+	glDeleteVertexArrays(1, &quadVAO);
+	glDeleteBuffers(1, &quadVBO);
+
+	if (SMAA_enabled)
+	{
+		glDeleteFramebuffers(1, &fboColor);
+		glDeleteTextures(1, &fboTexColor);
+
+		glDeleteFramebuffers(1, &fboEdge);
+		glDeleteTextures(1, &fboTexEdge);
+
+		glDeleteFramebuffers(1, &fboBlend);
+		glDeleteTextures(1, &fboTexBlend);
+	}
+	
+	glDeleteTextures(1, &skyboxTex);
+	glDeleteTextures(textures.size(), textures.data());
 }
 
 int GLWrapper::getWidth()
@@ -66,7 +82,8 @@ bool GLWrapper::init_window()
 
 	glfwSetErrorCallback(glfw_error_callback);
 
-	window = glfwCreateWindow(width, height, "RT", fullScreen ? monitor : NULL, NULL);
+	window = glfwCreateWindow(width, height, "RayTracing", fullScreen ? monitor : NULL, NULL);
+	glfwGetWindowSize(window, &width, &height);
 
 	if (!window) {
 		glfwTerminate();
@@ -81,8 +98,8 @@ bool GLWrapper::init_window()
 	}
 	printf("OpenGL %d.%d\n", GLVersion.major, GLVersion.minor);
 
-
-	float quadVertices[] = {
+	float quadVertices[] = 
+	{
 		-1.0f, -1.0f, 0.0f, 0.0f,
 		 1.0f, -1.0f, 1.0f, 0.0f,
 		 1.0f,  1.0f, 1.0f, 1.0f,
@@ -104,10 +121,18 @@ bool GLWrapper::init_window()
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 	glBindVertexArray(0);
 
+	// SMAA framebuffers
+	if (SMAA_enabled)
+	{
+		gen_framebuffer(&fboColor, &fboTexColor, GL_RGBA, GL_RGBA);
+		gen_framebuffer(&fboEdge, &fboTexEdge, GL_RG, GL_RG);
+		gen_framebuffer(&fboBlend, &fboTexBlend, GL_RGBA, GL_RGBA);
+	}
+
 	return true;
 }
 
-void GLWrapper::setSkybox(unsigned textureId)
+void GLWrapper::set_skybox(unsigned textureId)
 {
 	skyboxTex = textureId;
 	shader.setInt("skybox", 0);
@@ -121,46 +146,93 @@ void GLWrapper::stop()
 	glfwTerminate();
 }
 
+void GLWrapper::enable_SMAA(SMAA_PRESET preset)
+{
+	SMAA_enabled = true;
+	SMAA_preset = preset;
+}
+
 void GLWrapper::draw()
 {
 	shader.use();
 	glBindVertexArray(quadVAO);
+	if (SMAA_enabled) 
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, fboColor);
+	}
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
-	checkErrors("Draw screen");
+	checkGlErrors("Draw raytraced image");
+
+	if (!SMAA_enabled)
+	{
+		return;
+	}
+	
+	edgeShader.use();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, fboTexColor);
+	glBindFramebuffer(GL_FRAMEBUFFER, fboEdge);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	checkGlErrors("Draw edge");
+	
+	blendShader.use();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, fboTexEdge);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, areaTex);
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D, searchTex);
+	glBindFramebuffer(GL_FRAMEBUFFER, fboBlend);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	checkGlErrors("Draw blend");
+
+	neighborhoodShader.use();
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, fboTexColor);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, fboTexBlend);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClearColor(0, 0, 0, 0);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	checkGlErrors("Draw screen");
+
+	shader.use();
 }
 
-static std::string readFromFile(const char* path) {
-	std::string content;
-	std::ifstream file;
-	file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
-	try
-	{
-		file.open(path);
-		std::stringstream stream;
-		stream << file.rdbuf();
-		file.close();
-		content = stream.str();
-	}
-	catch (std::ifstream::failure& e)
-	{
-		std::cout << "ERROR::SHADER::FILE_NOT_SUCCESFULLY_READ" << std::endl;
+void GLWrapper::gen_framebuffer(GLuint* fbo, GLuint* fboTex, GLenum internalFormat, GLenum format) const
+{
+	glGenFramebuffers(1, fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, *fbo);
+
+	glGenTextures(1, fboTex);
+	glBindTexture(GL_TEXTURE_2D, *fboTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *fboTex, 0);
+	
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		std::cout << "ERROR::FRAMEBUFFER:: Framebuffer is not complete!" << std::endl;
 		exit(1);
 	}
-	return content;
-}
 
-bool replace(std::string& str, const std::string& from, const std::string& to) {
-	size_t start_pos = str.find(from);
-	if (start_pos == std::string::npos)
-		return false;
-	str.replace(start_pos, from.length(), to);
-	return true;
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void GLWrapper::init_shaders(rt_defines& defines)
 {
-	const std::string vertexShaderSrc = readFromFile(ASSETS_DIR "/rt.vert");
-	std::string fragmentShaderSrc = readFromFile(ASSETS_DIR "/rt.frag");
+	const std::string vertexShaderSrc = readStringFromFile(ASSETS_DIR "/shaders/quad.vert");
+	std::string fragmentShaderSrc = readStringFromFile(ASSETS_DIR "/shaders/rt.frag");
 	
 	replace(fragmentShaderSrc, "{SPHERE_SIZE}", std::to_string(defines.sphere_size));
 	replace(fragmentShaderSrc, "{PLANE_SIZE}", std::to_string(defines.plane_size));
@@ -176,9 +248,32 @@ void GLWrapper::init_shaders(rt_defines& defines)
 
 	shader.initFromSrc(vertexShaderSrc.c_str(), fragmentShaderSrc.c_str());
 
-	checkErrors("Render shaders");
+	if (SMAA_enabled)
+	{
+		SMAA_Builder smaaBuilder(width, height, SMAA_preset);
+		smaaBuilder.init_edge_shader(edgeShader);
+		smaaBuilder.init_blend_shader(blendShader);
+		smaaBuilder.init_neighborhood_shader(neighborhoodShader);
+
+		edgeShader.use();
+		edgeShader.setInt("color_tex", 0);
+
+		blendShader.use();
+		blendShader.setInt("edge_tex", 0);
+		blendShader.setInt("area_tex", 1);
+		blendShader.setInt("search_tex", 2);
+
+		neighborhoodShader.use();
+		neighborhoodShader.setInt("color_tex", 0);
+		neighborhoodShader.setInt("blend_tex", 1);
+
+		areaTex = smaaBuilder.load_area_texture();
+		searchTex = smaaBuilder.load_search_texture();
+	}
 
 	shader.use();
+
+	checkGlErrors("Shader creation");
 }
 
 std::string GLWrapper::to_string(glm::vec3 v)
@@ -186,16 +281,7 @@ std::string GLWrapper::to_string(glm::vec3 v)
 	return std::string().append("vec3(").append(std::to_string(v.x)).append(",").append(std::to_string(v.y)).append(",").append(std::to_string(v.z)).append(")");
 }
 
-void GLWrapper::checkErrors(std::string desc)
-{
-    GLenum e = glGetError();
-	if (e != GL_NO_ERROR) {
-		fprintf(stderr, "OpenGL error in \"%s\": (%d)\n", desc.c_str(), e); //todo error must be here
-		exit(20);
-	}
-}
-
-unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool genMipmap)
+unsigned int GLWrapper::load_cubemap(std::vector<std::string> faces, bool genMipmap)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -230,7 +316,7 @@ unsigned int GLWrapper::loadCubemap(std::vector<std::string> faces, bool genMipm
 	return textureID;
 }
 
-unsigned int GLWrapper::loadTexture(char const* path, GLuint wrapMode)
+unsigned int GLWrapper::load_texture(char const* path, GLuint wrapMode)
 {
 	unsigned int textureID;
 	glGenTextures(1, &textureID);
@@ -267,15 +353,16 @@ unsigned int GLWrapper::loadTexture(char const* path, GLuint wrapMode)
 	return textureID;
 }
 
-GLuint GLWrapper::loadTexture(int texNum, const char* name, const char* uniformName, GLuint wrapMode) const
+GLuint GLWrapper::load_texture(int texNum, const char* name, const char* uniformName, GLuint wrapMode)
 {
 	const std::string path = ASSETS_DIR "/textures/" + std::string(name);
-	const unsigned int tex = loadTexture(path.c_str(), wrapMode);
+	const unsigned int tex = load_texture(path.c_str(), wrapMode);
 	shader.setInt(uniformName, texNum);
+	textures.push_back(tex);
 	return tex;
 }
 
-void GLWrapper::initBuffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data) const
+void GLWrapper::init_buffer(GLuint* ubo, const char* name, int bindingPoint, size_t size, void* data) const
 {
 	glGenBuffers(1, ubo);
 	glBindBuffer(GL_UNIFORM_BUFFER, *ubo);
@@ -291,7 +378,7 @@ void GLWrapper::initBuffer(GLuint* ubo, const char* name, int bindingPoint, size
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-void GLWrapper::updateBuffer(GLuint ubo, size_t size, void* data)
+void GLWrapper::update_buffer(GLuint ubo, size_t size, void* data)
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, ubo);
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, size, data);

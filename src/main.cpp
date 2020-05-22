@@ -1,21 +1,14 @@
 #include <glad/glad.h>
-
 #include <GLFW/glfw3.h>
 #include <chrono>
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
-#include "shader.h"
 
-static int wind_width = 1200;
-static int wind_height = 800;
+static int wind_width = 1280;
+static int wind_height = 720;
 
-/*
- * todo
- * AA
- */
-
-void updateScene(scene_container& scene, float delta, float time);
+void update_scene(scene_container& scene, float delta, float time);
 
 namespace update {
 	int jupiter = -1,
@@ -26,22 +19,29 @@ namespace update {
 		torus = -1;
 }
 
-const glm::quat saturnPitch = glm::quat(glm::vec3(glm::radians(15.f), 0, 0));
+const glm::quat saturn_pitch = glm::quat(glm::vec3(glm::radians(15.f), 0, 0));
 
 int main()
 {
 	GLWrapper glWrapper(wind_width, wind_height, false);
 	// fullscreen
-	// GLWrapper glWrapper(true);
+	//GLWrapper glWrapper(true);
 	// window with monitor resolution
-	// GLWrapper glWrapper(false);
+	//GLWrapper glWrapper(false);
 
-	scene_container scene = {};
-
+	// set SMAA quality preset
+	glWrapper.enable_SMAA(MEDIUM);
+	
 	glWrapper.init_window();
 	glfwSwapInterval(1); // vsync
 	wind_width = glWrapper.getWidth();
 	wind_height = glWrapper.getHeight();
+
+	// fix ray direction issues
+	if (wind_width % 2 == 1) wind_width++;
+	if (wind_height % 2 == 1) wind_height++;
+
+	scene_container scene = {};
 
 	scene.scene = SceneManager::create_scene(wind_width, wind_height);
 	scene.scene.camera_pos = { 0, 0, -5 };
@@ -74,7 +74,7 @@ int main()
 	rt_sphere saturn = SceneManager::create_sphere({}, saturnRadius,
 		SceneManager::create_material({}, 0, 0.0f));
 	saturn.textureNum = 2;
-	saturn.quat_rotation = saturnPitch;
+	saturn.quat_rotation = saturn_pitch;
 	scene.spheres.push_back(saturn);
 	update::saturn = scene.spheres.size() - 1;
 
@@ -90,7 +90,7 @@ int main()
 		rt_ring ring = SceneManager::create_ring({}, saturnRadius * 1.1166, saturnRadius * 2.35,
 			SceneManager::create_material({}, 0, 0));
 		ring.textureNum = 4;
-		ring.quat_rotation = glm::angleAxis(glm::radians(90.f), glm::vec3(1, 0, 0)) * saturnPitch;
+		ring.quat_rotation = glm::angleAxis(glm::radians(90.f), glm::vec3(1, 0, 0)) * saturn_pitch;
 		scene.rings.push_back(ring);
 		update::saturn_rings = scene.rings.size() - 1;
 	}
@@ -145,42 +145,39 @@ int main()
 		ASSETS_DIR "/textures/sb_nebula/GalaxyTex_NegativeZ.jpg"
 	};
 
-	glWrapper.setSkybox(GLWrapper::loadCubemap(faces, false));
+	glWrapper.set_skybox(GLWrapper::load_cubemap(faces, false));
 
-	auto jupiterTex = glWrapper.loadTexture(1, "8k_jupiter.jpg", "texture_sphere_1");
-	auto saturnTex = glWrapper.loadTexture(2, "8k_saturn.jpg", "texture_sphere_2");
-	auto marsTex = glWrapper.loadTexture(3, "2k_mars.jpg", "texture_sphere_3");
-	auto ringTex = glWrapper.loadTexture(4, "8k_saturn_ring_alpha.png", "texture_ring");
-	auto boxTex = glWrapper.loadTexture(5, "container.png", "texture_box");
+	auto jupiterTex = glWrapper.load_texture(1, "8k_jupiter.jpg", "texture_sphere_1");
+	auto saturnTex = glWrapper.load_texture(2, "8k_saturn.jpg", "texture_sphere_2");
+	auto marsTex = glWrapper.load_texture(3, "2k_mars.jpg", "texture_sphere_3");
+	auto ringTex = glWrapper.load_texture(4, "8k_saturn_ring_alpha.png", "texture_ring");
+	auto boxTex = glWrapper.load_texture(5, "container.png", "texture_box");
 
 	SceneManager scene_manager(wind_width, wind_height, &scene, &glWrapper);
 	scene_manager.init();
 
 	auto start = std::chrono::steady_clock::now();
 	auto currentTime = std::chrono::steady_clock::now();
-	int frames_count = 0;
-
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D, jupiterTex);
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D, saturnTex);
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D, marsTex);
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_2D, ringTex);
-	glActiveTexture(GL_TEXTURE5);
-	glBindTexture(GL_TEXTURE_2D, boxTex);
 
 	while (!glfwWindowShouldClose(glWrapper.window))
 	{
-		frames_count++;
 		auto newTime = std::chrono::steady_clock::now();
 		std::chrono::duration<float> elapsed = (newTime - start);
 		std::chrono::duration<float> frameTime = (newTime - currentTime);
 		currentTime = newTime;
 
-		updateScene(scene, frameTime.count(), elapsed.count());
+		update_scene(scene, frameTime.count(), elapsed.count());
 		scene_manager.update(frameTime.count());
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, jupiterTex);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, saturnTex);
+		glActiveTexture(GL_TEXTURE3);
+		glBindTexture(GL_TEXTURE_2D, marsTex);
+		glActiveTexture(GL_TEXTURE4);
+		glBindTexture(GL_TEXTURE_2D, ringTex);
+		glActiveTexture(GL_TEXTURE5);
+		glBindTexture(GL_TEXTURE_2D, boxTex);
 		glWrapper.draw();
 		glfwSwapBuffers(glWrapper.window);
 		glfwPollEvents();
@@ -190,7 +187,7 @@ int main()
 	return 0;
 }
 
-void updateScene(scene_container& scene, float delta, float time)
+void update_scene(scene_container& scene, float delta, float time)
 {
 	if (update::jupiter != -1) {
 		rt_sphere* jupiter = &scene.spheres[update::jupiter];
@@ -211,7 +208,7 @@ void updateScene(scene_container& scene, float delta, float time)
 		saturn->obj.x = cos(time * speed + offset) * dist;
 		saturn->obj.z = sin(time * speed + offset) * dist;
 
-		glm::vec3 axis = glm::vec3(0, 1, 0) * saturnPitch;
+		glm::vec3 axis = glm::vec3(0, 1, 0) * saturn_pitch;
 		saturn->quat_rotation *= glm::angleAxis(delta / 10, axis);
 
 		ring->pos.x = cos(time * speed + offset) * dist;

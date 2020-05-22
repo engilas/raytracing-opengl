@@ -31,16 +31,16 @@ void SceneManager::init()
 	glfwSetKeyCallback(wrapper->window, keyFunc);
 	glfwSetFramebufferSizeCallback(wrapper->window, glfw_framebuffer_size_callback);
 
-	initBuffers();
+	init_buffers();
 }
 
 void SceneManager::update(float frameRate)
 {
-	UpdateScene(frameRate);
-	updateBuffers();
+	update_scene(frameRate);
+	update_buffers();
 }
 
-void SceneManager::UpdateScene(float frameRate)
+void SceneManager::update_scene(float frameRate)
 {
 	front.x = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
 	front.y = sin(glm::radians(pitch));
@@ -236,49 +236,46 @@ rt_scene SceneManager::create_scene(int width, int height)
 }
 
 template<typename T>
-void SceneManager::initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& v)
+void SceneManager::init_buffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& v)
 {
-	wrapper->initBuffer(ubo, name, bindingPoint, sizeof(T) * v.size(), v.data());
+	wrapper->init_buffer(ubo, name, bindingPoint, sizeof(T) * v.size(), v.data());
 }
 
-void SceneManager::initBuffers()
+void SceneManager::init_buffers()
 {
-	wrapper->initBuffer(&sceneUbo, "scene_buf", 0, sizeof(rt_scene), nullptr);
-	initBuffer(&sphereUbo, "spheres_buf", 1, scene->spheres);
-	initBuffer(&planeUbo, "planes_buf", 2, scene->planes);
-	initBuffer(&surfaceUbo, "surfaces_buf", 3, scene->surfaces);
-	initBuffer(&boxUbo, "boxes_buf", 4, scene->boxes);
-	initBuffer(&torusUbo, "toruses_buf", 5, scene->toruses);
-	initBuffer(&ringUbo, "rings_buf", 6, scene->rings);
-	initBuffer(&lightPointUbo, "lights_point_buf", 7, scene->lights_point);
-	initBuffer(&lightDirectUbo, "lights_direct_buf", 8, scene->lights_direct);
+	wrapper->init_buffer(&sceneUbo, "scene_buf", 0, sizeof(rt_scene), nullptr);
+	init_buffer(&sphereUbo, "spheres_buf", 1, scene->spheres);
+	init_buffer(&planeUbo, "planes_buf", 2, scene->planes);
+	init_buffer(&surfaceUbo, "surfaces_buf", 3, scene->surfaces);
+	init_buffer(&boxUbo, "boxes_buf", 4, scene->boxes);
+	init_buffer(&torusUbo, "toruses_buf", 5, scene->toruses);
+	init_buffer(&ringUbo, "rings_buf", 6, scene->rings);
+	init_buffer(&lightPointUbo, "lights_point_buf", 7, scene->lights_point);
+	init_buffer(&lightDirectUbo, "lights_direct_buf", 8, scene->lights_direct);
 }
 
 template<typename T>
-void SceneManager::updateBuffer(GLuint ubo, std::vector<T>& v) const
+void SceneManager::update_buffer(GLuint ubo, std::vector<T>& v) const
 {
 	if (!v.empty())
 	{
-		wrapper->updateBuffer(ubo, sizeof(T) * v.size(), v.data());
+		wrapper->update_buffer(ubo, sizeof(T) * v.size(), v.data());
 	}
 }
 
-void SceneManager::updateBuffers() const
+void SceneManager::update_buffers() const
 {
-	glBindBuffer(GL_UNIFORM_BUFFER, sceneUbo);
-	GLvoid* scene_p = glMapBuffer(GL_UNIFORM_BUFFER, GL_WRITE_ONLY);
-	memcpy(scene_p, &scene->scene, sizeof(rt_scene));
-	glUnmapBuffer(GL_UNIFORM_BUFFER);
-	updateBuffer(sphereUbo, scene->spheres);
-	updateBuffer(planeUbo, scene->planes);
-	updateBuffer(surfaceUbo, scene->surfaces);
-	updateBuffer(boxUbo, scene->boxes);
-	updateBuffer(torusUbo, scene->toruses);
-	updateBuffer(ringUbo, scene->rings);
-	updateBuffer(lightPointUbo, scene->lights_point);
+	wrapper->update_buffer(sceneUbo, sizeof(rt_scene), &scene->scene);
+	update_buffer(sphereUbo, scene->spheres);
+	update_buffer(planeUbo, scene->planes);
+	update_buffer(surfaceUbo, scene->surfaces);
+	update_buffer(boxUbo, scene->boxes);
+	update_buffer(torusUbo, scene->toruses);
+	update_buffer(ringUbo, scene->rings);
+	update_buffer(lightPointUbo, scene->lights_point);
 }
 
-glm::vec3 SceneManager::getColor(float r, float g, float b)
+glm::vec3 SceneManager::get_color(float r, float g, float b)
 {
 	return glm::vec3(r / 255, g / 255, b / 255);
 }

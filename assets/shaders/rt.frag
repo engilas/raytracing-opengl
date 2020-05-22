@@ -292,9 +292,9 @@ vec3 rotate(vec4 qr, vec3 v)
 	return quat_mult(q_tmp, qr_conj).xyz;
 }
 
-vec3 getRayDir(vec2 pixel_coords)
+vec3 getRayDir()
 {
-	vec3 result = vec3((pixel_coords - vec2(scene.canvas_width, scene.canvas_height) / 2) / scene.canvas_height, 1);
+	vec3 result = vec3((gl_FragCoord.xy - vec2(scene.canvas_width, scene.canvas_height) / 2) / scene.canvas_height, 1);
 	return normalize(rotate(scene.quat_camera_rotation, result));
 }
 
@@ -788,11 +788,6 @@ vec3 getReflectedColor(vec3 ro, vec3 rd)
 
 void main()
 {
-	vec2 pixel_coords = gl_FragCoord.xy;
-	if (pixel_coords.x >= scene.canvas_width || pixel_coords.y >= scene.canvas_height){
-		return;
-	}
-
 	float reflectMultiplier,refractMultiplier,tm;
 	vec3 col;
     rt_material mat;
@@ -805,7 +800,7 @@ void main()
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
 	vec3 ro = vec3(scene.camera_pos);
-	vec3 rd = getRayDir(pixel_coords);
+	vec3 rd = getRayDir();
 	float absorbDistance = 0.0;
 	int type = 0;
 	int num;

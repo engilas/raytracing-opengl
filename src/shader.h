@@ -8,6 +8,7 @@
 #include <sstream>
 #include <iostream>
 #include <glm/glm.hpp>
+#include "utils.h"
 
 class Shader
 {
@@ -17,6 +18,11 @@ public:
 	Shader()
 	{
 
+	}
+
+	Shader(const std::string& vertexPath, const std::string& fragmentPath)
+	{
+		initFromFile(vertexPath.c_str(), fragmentPath.c_str());
 	}
 
 	Shader(const char* vertexPath, const char* fragmentPath)
@@ -61,6 +67,10 @@ public:
 		initFromSrc(vertexCode.c_str(), fragmentCode.c_str());
 	}
 
+	void initFromSrc(const std::string& vertexSrc, const std::string& fragmentSrc) {
+		initFromSrc(vertexSrc.c_str(), fragmentSrc.c_str());
+	}
+	
 	void initFromSrc(const char* vertexSrc, const char* fragmentSrc) {
 		// 2. compile shaders
 		unsigned int vertex, fragment;

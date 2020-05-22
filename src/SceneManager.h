@@ -62,20 +62,16 @@ private:
 	GLuint lightPointUbo = 0;
 	GLuint lightDirectUbo = 0;
 
-	void multiplyVector(float v[3], float s);
-	void addVector(glm::vec3& v1, const float v2[3]);
-	void moveCamera(glm::quat& q, const float direction[3], glm::vec3& vector, float speed);
-	void moveCamera(const float direction[3], glm::vec3& vector, float speed);
-	void UpdateScene(float frameRate);
+	void update_scene(float frameRate);
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
 	void glfw_mouse_callback(GLFWwindow* window, double xpos, double ypos);
-	void initBuffers();
-	void updateBuffers() const;
-	glm::vec3 getColor(float r, float g, float b);
+	void init_buffers();
+	void update_buffers() const;
+	glm::vec3 get_color(float r, float g, float b);
 
 	template<typename T>
-	void initBuffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& v);
+	void init_buffer(GLuint* ubo, const char* name, int bindingPoint, std::vector<T>& v);
 	template<typename T>
-	void updateBuffer(GLuint ubo, std::vector<T>& v) const;
+	void update_buffer(GLuint ubo, std::vector<T>& v) const;
 };
