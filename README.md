@@ -21,6 +21,7 @@ Contains following geometric primititives:
   - Elliptic hyperboloid
   
 Also:  
+- SMAA antialiasing
 - Texturing for sphere, box, ring
 - Cubemaps
 - Rotations with quaternions
