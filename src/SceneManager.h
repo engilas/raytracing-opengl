@@ -62,7 +62,7 @@ private:
 	GLuint lightPointUbo = 0;
 	GLuint lightDirectUbo = 0;
 
-	void update_scene(float frameRate);
+	void update_scene(float deltaTime);
 	void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 	static void glfw_framebuffer_size_callback(GLFWwindow* wind, int width, int height);
 	void glfw_mouse_callback(GLFWwindow* window, double xpos, double ypos);

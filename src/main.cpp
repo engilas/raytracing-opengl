@@ -1,6 +1,5 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include <chrono>
 #include "GLWrapper.h"
 #include "SceneManager.h"
 #include "Surface.h"
@@ -30,7 +29,7 @@ int main()
 	//GLWrapper glWrapper(false);
 
 	// set SMAA quality preset
-	glWrapper.enable_SMAA(MEDIUM);
+	glWrapper.enable_SMAA(ULTRA);
 	
 	glWrapper.init_window();
 	glfwSwapInterval(1); // vsync
@@ -156,18 +155,26 @@ int main()
 	SceneManager scene_manager(wind_width, wind_height, &scene, &glWrapper);
 	scene_manager.init();
 
-	auto start = std::chrono::steady_clock::now();
-	auto currentTime = std::chrono::steady_clock::now();
+	float currentTime = static_cast<float>(glfwGetTime());
+	float lastFramesPrint = currentTime;
+	float framesCount = 0;
 
 	while (!glfwWindowShouldClose(glWrapper.window))
 	{
-		auto newTime = std::chrono::steady_clock::now();
-		std::chrono::duration<float> elapsed = (newTime - start);
-		std::chrono::duration<float> frameTime = (newTime - currentTime);
+		framesCount++;
+		float newTime = static_cast<float>(glfwGetTime());
+		float deltaTime = newTime - currentTime;
 		currentTime = newTime;
 
-		update_scene(scene, frameTime.count(), elapsed.count());
-		scene_manager.update(frameTime.count());
+		if (newTime - lastFramesPrint > 1.0f)
+		{
+			std::cout << "FPS: " << framesCount << std::endl;
+			lastFramesPrint = newTime;
+			framesCount = 0;
+		}
+
+		update_scene(scene, deltaTime, newTime);
+		scene_manager.update(deltaTime);
 		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D, jupiterTex);
 		glActiveTexture(GL_TEXTURE2);
@@ -187,7 +194,7 @@ int main()
 	return 0;
 }
 
-void update_scene(scene_container& scene, float delta, float time)
+void update_scene(scene_container& scene, float deltaTime, float time)
 {
 	if (update::jupiter != -1) {
 		rt_sphere* jupiter = &scene.spheres[update::jupiter];
@@ -195,7 +202,7 @@ void update_scene(scene_container& scene, float delta, float time)
 		jupiter->obj.x = cos(time * jupiterSpeed) * 20000;
 		jupiter->obj.z = sin(time * jupiterSpeed) * 20000;
 
-		jupiter->quat_rotation *= glm::angleAxis(delta / 15, glm::vec3(0, 1, 0));
+		jupiter->quat_rotation *= glm::angleAxis(deltaTime / 15, glm::vec3(0, 1, 0));
 	}
 
 	if (update::saturn != -1 && update::saturn_rings != -1) {
@@ -209,7 +216,7 @@ void update_scene(scene_container& scene, float delta, float time)
 		saturn->obj.z = sin(time * speed + offset) * dist;
 
 		glm::vec3 axis = glm::vec3(0, 1, 0) * saturn_pitch;
-		saturn->quat_rotation *= glm::angleAxis(delta / 10, axis);
+		saturn->quat_rotation *= glm::angleAxis(deltaTime / 10, axis);
 
 		ring->pos.x = cos(time * speed + offset) * dist;
 		ring->pos.z = sin(time * speed + offset) * dist;
@@ -221,19 +228,19 @@ void update_scene(scene_container& scene, float delta, float time)
 		mars->obj.x = cos(time * marsSpeed + 0.5f) * 10000;
 		mars->obj.z = sin(time * marsSpeed + 0.5f) * 10000;
 		mars->obj.y = -cos(time * marsSpeed) * 3000;
-		mars->quat_rotation *= glm::angleAxis(delta / 5, glm::vec3(0, 1, 0));
+		mars->quat_rotation *= glm::angleAxis(deltaTime / 5, glm::vec3(0, 1, 0));
 	}
 
 	if (update::box != -1)
 	{
 		rt_box* box = &scene.boxes[update::box];
-		glm::quat q = glm::angleAxis(delta, glm::vec3(0.5774, 0.5774, 0.5774));
+		glm::quat q = glm::angleAxis(deltaTime, glm::vec3(0.5774, 0.5774, 0.5774));
 		box->quat_rotation *= q;
 	}
 
 	if (update::torus != -1)
 	{
 		rt_torus* torus = &scene.toruses[update::torus];
-		torus->quat_rotation *= glm::angleAxis(delta, glm::vec3(0, 1, 0));
+		torus->quat_rotation *= glm::angleAxis(deltaTime, glm::vec3(0, 1, 0));
 	}
 }

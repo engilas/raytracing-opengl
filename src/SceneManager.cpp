@@ -34,13 +34,13 @@ void SceneManager::init()
 	init_buffers();
 }
 
-void SceneManager::update(float frameRate)
+void SceneManager::update(float deltaTime)
 {
-	update_scene(frameRate);
+	update_scene(deltaTime);
 	update_buffers();
 }
 
-void SceneManager::update_scene(float frameRate)
+void SceneManager::update_scene(float deltaTime)
 {
 	front.x = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
 	front.y = sin(glm::radians(pitch));
@@ -49,7 +49,7 @@ void SceneManager::update_scene(float frameRate)
 	right = glm::normalize(glm::cross(-front, world_up));
 	scene->scene.quat_camera_rotation = glm::quat(glm::vec3(glm::radians(-pitch), glm::radians(yaw), 0));
 
-	auto speed = frameRate * 3;
+	auto speed = deltaTime * 3;
 	if (shift_pressed)
 		speed *= 3;
 	if (alt_pressed)
