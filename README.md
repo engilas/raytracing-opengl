@@ -48,7 +48,8 @@ cmake --build .
 ```
 #### For windows:
 GLFW binaries included (common/GLFW), glfw3.lib compiled for Visual Studio 2019
-You can use binaries for other VS versions from GLFW/win-x64, or compile by yourself.
+
+You can use binaries for other VS versions from GLFW/win-x64 directory, or compile by yourself.
 
 
 ### Requirements
