@@ -46,7 +46,11 @@ cd bin
 cmake ..
 cmake --build .
 ```
-#### For windows:
+#### GLFW for linux:
+```sh
+sudo apt install libglfw3-dev
+```
+#### GLFW for windows:
 GLFW binaries included (common/GLFW), glfw3.lib compiled for Visual Studio 2019
 
 You can use binaries for other VS versions from GLFW/win-x64 directory, or compile by yourself.
