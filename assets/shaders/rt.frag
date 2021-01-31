@@ -14,6 +14,7 @@
 
 #define SHADOW_ENABLED 1
 #define DBG 0
+#define DBG_FIRST_VALUE 1
 
 #define TOTAL_INTERNAL_REFLECTION 1
 #define DO_FRESNEL 1
@@ -141,6 +142,16 @@ uniform sampler2D texture_sphere_4;
 uniform sampler2D texture_ring;
 uniform sampler2D texture_box;
 
+const float maxDist = 1000000.0;
+
+// if attributes calculations can be processed with intersection search (box, disk)
+vec3 opt_normal;
+vec2 opt_uv;
+
+#if DBG
+bool dbgEd = false;
+#endif
+
 layout( std140 ) uniform scene_buf
 {
     rt_scene scene;
@@ -218,13 +229,14 @@ layout( std140 ) uniform lights_direct_buf
 	#endif
 };
 
-#if DBG
-bool dbgEd = false;
-#endif
-
 void _dbg()
 {
 	#if DBG
+	#if DBG_FIRST_VALUE 
+	if (dbgEd)
+		return;
+	#endif
+	
 	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
     FragColor =vec4(1,0,0,1);
 	dbgEd = true;
@@ -234,6 +246,10 @@ void _dbg()
 void _dbg(float value)
 {
 	#if DBG
+	#if DBG_FIRST_VALUE 
+	if (dbgEd)
+		return;
+	#endif
 	value = clamp(value, 0, 1);
 	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
     FragColor = vec4(value,value,value,1);
@@ -244,6 +260,10 @@ void _dbg(float value)
 void _dbg(vec3 value)
 {
 	#if DBG
+	#if DBG_FIRST_VALUE 
+	if (dbgEd)
+		return;
+	#endif
 	ivec2 pixel_coords = ivec2 (gl_FragCoord.xy);
     FragColor = vec4(clamp(value, vec3(0), vec3(1)),1);
 	dbgEd = true;
@@ -261,8 +281,6 @@ bool isBetween(vec3 value, vec3 min, vec3 max)
 {
 	return greaterThan(value, min) == bvec3(true) && lessThan(value, max) == bvec3(true);
 }
-
-const float maxDist = 1000000.0;
 
 vec4 quat_conj(vec4 q)
 { 
@@ -351,7 +369,7 @@ bool intersectPlane(vec3 ro, vec3 rd, vec3 n, vec3 p, float tmin, out float t) {
     return false; 
 }
 
-bool intersectRing(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec2 uv) {
+bool intersectRing(vec3 ro, vec3 rd, int num, float tmin, out float t) {
 	rt_ring ring = rings[num];
 	rd = rotate(ring.quat_rotation, rd);
 	ro = rotate(ring.quat_rotation, ro - ring.pos);
@@ -365,7 +383,7 @@ bool intersectRing(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec2 
 
 	if (t > 0 && t < tmin && p < ring.r2 && p > ring.r1) {
 		float cosv = dot(normalize(vec2(x, y)), vec2(1, 0));
-		uv = vec2((p - ring.r1) / (ring.r2 - ring.r1), cosv);
+		opt_uv = vec2((p - ring.r1) / (ring.r2 - ring.r1), cosv);
 		return true;
 	}
 	return false;
@@ -378,7 +396,7 @@ vec4 getRingTexture(int num, vec2 uv) {
 	return texture(texture_ring, uv);
 }
 
-bool intersectBox(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec3 normal) 
+bool intersectBox(vec3 ro, vec3 rd, int num, float tmin, out float t) 
 {
 	rt_box box = boxes[num];
     // convert from ray to box space
@@ -404,7 +422,7 @@ bool intersectBox(vec3 ro, vec3 rd, int num, float tmin, out float t, out vec3 n
 	vec3 nor = -sign(rdd)*step(t1.yzx,t1.xyz)*step(t1.zxy,t1.xyz);
 	t = tN;
 	// convert to ray space
-	normal = rotate(quat_inv(box.quat_rotation), nor);
+	opt_normal = rotate(quat_inv(box.quat_rotation), nor);
 	return true;
 }
 vec4 getBoxTexture(vec3 pt, vec3 normal, int num) {
@@ -566,7 +584,7 @@ vec3 getSurfaceNormal(vec3 ro, vec3 rd, float t, int num) {
 }
 // end surface section
 
-float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal, out vec2 opt_uv)
+float calcInter(vec3 ro, vec3 rd, out int num, out int type)
 {
 	float tmin = maxDist;
 	float t;
@@ -586,7 +604,7 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal
 		}
 	}
 	for (int i = 0; i < BOX_SIZE; i++) {
-		if (intersectBox(ro, rd, i, tmin, t, opt_normal)) {
+		if (intersectBox(ro, rd, i, tmin, t)) {
 			num = i; tmin = t; type = TYPE_BOX;
 		}
 	}
@@ -596,7 +614,7 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal
 		}
 	}
 	for (int i = 0; i < RING_SIZE; i++) {
-		if (intersectRing(ro, rd, i, tmin, t, opt_uv)) {
+		if (intersectRing(ro, rd, i, tmin, t)) {
 			num = i; tmin = t; type = TYPE_RING;
 		}
 	}
@@ -612,8 +630,6 @@ float calcInter(vec3 ro, vec3 rd, out int num, out int type, out vec3 opt_normal
 float inShadow(vec3 ro, vec3 rd, float dist)
 {
 	float t;
-	vec3 opt_normal;
-	vec2 opt_uv;
 	float shadow = 0;
 	
 	for (int i = 0; i < SPHERE_SIZE; i++)
@@ -621,11 +637,11 @@ float inShadow(vec3 ro, vec3 rd, float dist)
 	for (int i = 0; i < SURFACE_SIZE; i++)
 		if(intersectSurface(ro, rd, i, dist, t)) {shadow = 1;}
 	for (int i = 0; i < BOX_SIZE; i++)
-		if(intersectBox(ro, rd, i, dist, t, opt_normal)) {shadow = 1;}
+		if(intersectBox(ro, rd, i, dist, t)) {shadow = 1;}
 	for (int i = 0; i < TORUS_SIZE; i++)
 		if(intersectTorus(ro, rd, i, dist, t)) {shadow = 1;}
 	for (int i = 0; i < RING_SIZE; i++)
-		if(intersectRing(ro, rd, i, dist, t, opt_uv)) {
+		if(intersectRing(ro, rd, i, dist, t)) {
 			rt_ring ring = rings[i];
 			if (ring.textureNum > 0) {
 				shadow += getRingTexture(ring.textureNum, opt_uv).a;
@@ -698,7 +714,7 @@ float getFresnel(vec3 normal, vec3 rd, float reflection)
 	return reflection + (1.0 - reflection) * pow(1.0 - ndotv, 5.0);
 }
 
-float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, float refl)
+float FresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float refl)
 {
     #if DO_FRESNEL
         // Schlick aproximation
@@ -725,7 +741,7 @@ float FresnelReflectAmount (float n1, float n2, vec3 normal, vec3 incident, floa
     #endif
 }
 
-hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float t, int num, int type, vec3 opt_normal, vec2 opt_uv) {
+hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float t, int num, int type) {
 	hit_record hr;
 	if (type == TYPE_SPHERE) {
 		rt_sphere sphere = spheres[num];
@@ -771,15 +787,14 @@ hit_record get_hit_info(vec3 ro, vec3 rd, vec3 pt, float t, int num, int type, v
 vec3 getReflectedColor(vec3 ro, vec3 rd)
 {
 	vec3 color = vec3(0);
-	vec3 pt, opt_normal;
-	vec2 opt_uv;
+	vec3 pt;
 	int num, type;
-	float t = calcInter(ro, rd, num, type, opt_normal, opt_uv);
+	float t = calcInter(ro, rd, num, type);
 	if (type == TYPE_POINT_LIGHT) return lights_point[num].color;
 	hit_record hr;
 	if(t < maxDist) {
 		pt = ro + rd * t;
-		hr = get_hit_info(ro, rd, pt, t, num, type, opt_normal, opt_uv);
+		hr = get_hit_info(ro, rd, pt, t, num, type);
 		ro = dot(rd, hr.normal) < 0 ? pt + hr.normal * hr.bias_mult : pt - hr.normal * hr.bias_mult;
 		color = calcShade(ro, rd, hr.mat, hr.normal, true);
 	}
@@ -793,9 +808,6 @@ void main()
     rt_material mat;
 	vec3 pt,n;
 	vec4 ob;
-	// if attributes calculations can be processed with intersection search (box, disk)
-	vec3 opt_normal; 
-	vec2 opt_uv;
 
 	vec3 mask = vec3(1.0);
 	vec3 color = vec3(0.0);
@@ -808,11 +820,11 @@ void main()
 	
 	for(int i = 0; i < ITERATIONS; i++)
 	{
-		tm = calcInter(ro, rd, num, type, opt_normal, opt_uv);
+		tm = calcInter(ro, rd, num, type);
 		if(tm < maxDist)
 		{
 			pt = ro + rd*tm;
-			hr = get_hit_info(ro, rd, pt, tm, num, type, opt_normal, opt_uv);
+			hr = get_hit_info(ro, rd, pt, tm, num, type);
 
 			if (type == TYPE_POINT_LIGHT) {
 				color += lights_point[num].color * mask;
