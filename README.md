@@ -39,6 +39,13 @@ Movement:
 - Shift (hold) - boost
 - Alt (hold) - slowdown
 
+### Requirements
+
+* CMake (>= 3.0.2)
+* GPU with OpenGL (>= 3.3) support
+* GLM (included)
+* GLFW, should be automatically found by CMake (win64 binaries included)
+
 ### Build
 ```sh
 mkdir bin
@@ -54,14 +61,6 @@ sudo apt install libglfw3-dev
 GLFW binaries included (common/GLFW), glfw3.lib compiled for Visual Studio 2019
 
 You can use binaries for other VS versions from GLFW/win-x64 directory, or compile by yourself.
-
-
-### Requirements
-
-* CMake (>= 3.0.2)
-* GPU with OpenGL (>= 3.3) support
-* GLM (included)
-* GLFW, should be automatically found by CMake (win64 binaries included)
 
 ### Screenshots
 
