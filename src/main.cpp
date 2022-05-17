@@ -104,7 +104,7 @@ int main()
 	scene.boxes.push_back(box);
 	update::box = scene.boxes.size() - 1;
 
-	// *** beware! torus calculations is the most heavy part of rendering
+	// *** beware! torus calculations is the heaviest part of rendering
 	// *** comment next line if you have performance issues
 	// torus
 	rt_torus torus = SceneManager::create_torus({ -9, 0.5, 6 }, { 1.0, 0.5 },
